@@ -1,0 +1,5 @@
+
+
+## Acceptance criteria
+
+Accepted Impact instances will describe how an AI project (research, models, systems, products, datasets) has already improved the lives of people. Each Impact should be supported by link(s) with confirmed evidence of improving multiple people's lives. For now, moderators will use their discretion to verify whether the source url provides sufficient evidence for the claims, will try to iterate with contributors to refine submissions that don't yet satisfy this but can be fixed. Over time, we expect to form more objective transparent rules around this. For now we will not accept individual reports of benefits, or anticipated outcomes, as Impacts, for these are hard to verify. Impacts will be accepted by human moderators of the repository. All Impacts by an AI project will be linked to its profile page.
