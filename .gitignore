@@ -2,3 +2,8 @@ __pycache__/
 *.pyc
 dist/
 node_modules/
+supabase/.temp/
+.env
+.env.*
+!.env.example
+.DS_Store
