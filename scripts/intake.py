@@ -191,7 +191,7 @@ def process(event, root, api):
                f"### Impact occurred by\n\n{record['occurred_by']}\n\n### Sources\n\n"
                + '\n'.join(f"- <{quote(url, safe=':/?&=%+#@!$;,~*-._')}>" for url in record['sources']) + '\n\n')
     pr = api.call("POST", "pulls", {
-        "title": f"{'Update' if comment else 'Add'} {relative} (Issue #{number})",
+        "title": ("Update: " if comment else "") + record["title"],
         "head": branch, "base": event["repository"]["default_branch"],
         "body": f"Source submission: {source}\n\nRelated Issue: #{number}\n\n"
                 + preview + image_preview + checklist,
