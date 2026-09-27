@@ -7,6 +7,8 @@ on:
     branches: [main]
     paths:
       - 'data/impacts/**'
+      - 'data/intake/**'
+      - '.github/workflows/voting.yml'
       - 'scripts/sync_voting.py'
 permissions:
   contents: read

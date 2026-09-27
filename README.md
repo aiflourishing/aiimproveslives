@@ -8,7 +8,7 @@ See [goals.md](goals.md) for the purpose and [todos.md](todos.md) for next steps
 
 Impacts live in `data/impacts/` as one JSON file per record. Validate with `python3 scripts/catalog.py validate`; run tests with `python3 -m unittest discover -s tests`. GitHub Actions runs both on PRs. Website styles and browser interactions live in `src/`.
 
-Issue submissions and `/update` JSON comments generate linked PRs through ordinary code. Merged records build into a static website artifact; public hosting is still to be enabled. The submission endpoint and Issue intake are active; the local website publishing workflow still needs to reach main.
+Issue submissions and `/update` JSON comments generate linked PRs through ordinary code. Merged records build into a static website artifact; the production publishing workflow validates the site before deployment. The submission endpoint and Issue intake are active.
 
 ## Website
 

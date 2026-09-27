@@ -22,6 +22,12 @@ jobs:
           python-version: '3.12'
       - run: python -m unittest discover -s tests
       - run: python scripts/catalog.py validate
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm test
       - run: python -m scripts.build_site
       - uses: actions/upload-artifact@v4
         with:
