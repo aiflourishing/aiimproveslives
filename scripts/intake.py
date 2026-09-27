@@ -180,6 +180,8 @@ def process(event, root, api):
         api.call("POST", "git/refs", {"ref": f"refs/heads/{branch}", "sha": commit["sha"]})
     source = (comment or issue)["html_url"]
     checklist = (Path(__file__).resolve().parents[1] / ".github/pull_request_template.md").read_text()
+    if comment:
+        checklist += "\n- [ ] Are the changes justified and unrelated accepted details preserved?\n"
     image_preview = ''
     if record.get('image'):
         # Encode Markdown delimiters so the URL cannot break out of the image.
