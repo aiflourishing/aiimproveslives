@@ -1,6 +1,6 @@
 # Community voting setup
 
-The website is static; Supabase hosts authentication and the private database. The current project is configured for local development. Public hosting still needs setup. The steps below describe setup for a new project.
+The website is static; Supabase hosts authentication and the private database. The current project allows localhost, the GitHub Pages callback, and both production domain callbacks. The steps below describe setup for a new project.
 
 1. Create a Supabase Free project. Run `migrations/001_reactions.sql`, then `migrations/003_neutral_laugh.sql` `migrations/004_highlight_submission_order.sql`, and `migrations/005_sync_safe_updates.sql`, once each in its SQL Editor. Do not expose the `private` schema through the Data API.
 2. Enable Google and GitHub in Supabase Authentication → Providers. Register OAuth applications with each provider and enter their client secrets in Supabase, not this repository. Use the Supabase callback URL shown by each provider configuration. See [Google setup](https://supabase.com/docs/guides/auth/social-login/auth-google) and [GitHub setup](https://supabase.com/docs/guides/auth/social-login/auth-github).

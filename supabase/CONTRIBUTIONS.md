@@ -19,7 +19,7 @@ The Contribute form and deployed `submit-impact` function create GitHub Issues, 
 6. Keep `http://localhost:8000/index.html` allowed in Supabase Auth's redirect URLs. This single callback returns people to the page that requested sign-in using session storage. The existing Google/GitHub providers are reused.
 7. Set `submissionsEnabled` to `true` in `src/voting-config.json` once the deployed endpoint is configured. Rebuild with `python3 -m scripts.build_site`. Sign in at `/contribute/`, submit a real source-supported impact, and verify the returned Issue and PR. Confirm the private receipt exists and a repeat of the same submission returns the same Issue. Do not publish fabricated test impacts.
 
-Later, add the actual production origin to `ALLOWED_ORIGINS` and the production `/index.html` callback to Supabase Auth when deploying the website. Public domain hosting is separate from this endpoint.
+The current deployment allows `http://localhost:8000`, `https://aiflourishing.github.io`, `https://lasteval.com`, and `https://aiimproveslives.com`. Auth allows each exact `index.html` callback, including the repository subpath on GitHub Pages. Custom-domain DNS and HTTPS are configured separately.
 
 ## Submission behavior
 
