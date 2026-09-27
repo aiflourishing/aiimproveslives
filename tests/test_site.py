@@ -16,7 +16,7 @@ class SiteTests(unittest.TestCase):
             (self.data / kind).mkdir(parents=True)
         self.source = self.base / 'src'
         self.source.mkdir()
-        for filename in ['styles.css', 'site.js', 'voting.js', 'contribute.js', 'contribute.html', 'contribute-copy.md', 'about.html', 'voting-config.json']:
+        for filename in ['styles.css', 'site.js', 'voting.js', 'contribute.js', 'contribute.html', 'contribute-copy.md', 'about.html', 'privacy.html', 'voting-config.json']:
             (self.source / filename).write_text((SOURCE / filename).read_text())
         shutil.copytree(SOURCE / 'vendor', self.source / 'vendor')
         self.output = self.base / 'dist'
