@@ -1,6 +1,7 @@
 """Deterministic Issue/JSON intake. Never evaluates contributor text as code."""
 
 import hashlib
+from urllib.parse import quote
 import json
 import os
 import re
@@ -10,7 +11,7 @@ import tempfile
 import uuid
 from pathlib import Path
 
-from scripts.catalog import SLUG, load_catalog, names
+from scripts.catalog import load_catalog
 
 
 def json_object(text):
@@ -45,43 +46,39 @@ def parse_submission(event, root):
         if not mapping:
             raise ValueError("Wait for the initial submission PR to merge before updating.")
         record = fenced_json(comment["body"])
-        kind, identifier = mapping["kind"], mapping["id"]
+        identifier = mapping["id"]
         if record.get("id") != identifier:
             raise ValueError("Keep the accepted record's id unchanged.")
     else:
         if mapping:
             raise ValueError("This record is accepted. Post /update with its full updated JSON.")
         body = issue.get("body") or ""
-        headings = re.findall(r"^### (Impact JSON|Profile JSON)$", body, re.M)
+        headings = re.findall(r"^### Impact JSON$", body, re.M)
         if len(headings) != 1:
-            raise ValueError("Use the Impact or Profile Issue form.")
-        kind = "impacts" if headings[0] == "Impact JSON" else "profiles"
+            raise ValueError("Use the Impact Issue form.")
         record = fenced_json(body)
         answer = re.search(r"^### Are you one of the contributor\(s\)\?\s*\n\s*(Yes|No)\s*(?:\n|$)", body, re.M)
         if not answer:
             raise ValueError("Answer 'Are you one of the contributor(s)?' with Yes or No.")
         record["submitter_is_contributor"] = answer[1] == "Yes"
-        if kind == "impacts":
-            identifier = str(uuid.uuid5(uuid.NAMESPACE_URL, issue["html_url"]))
-            if "id" in record and record["id"] != identifier:
-                raise ValueError("Omit id for a new Impact; it is generated automatically.")
-            record["id"] = identifier
-        else:
-            identifier = record.get("id")
-        mapping = {"kind": kind, "id": identifier, "issue_url": issue["html_url"]}
+        identifier = str(uuid.uuid5(uuid.NAMESPACE_URL, issue["html_url"]))
+        if "id" in record and record["id"] != identifier:
+            raise ValueError("Omit id for a new Impact; it is generated automatically.")
+        record["id"] = identifier
+        mapping = {"id": identifier, "issue_url": issue["html_url"]}
 
-    # Check identifiers BEFORE constructing filesystem paths.
-    if kind not in {"profiles", "impacts"} or not isinstance(identifier, str) or not SLUG.fullmatch(identifier):
-        raise ValueError("Invalid record id.")
-    relative = Path(kind) / f"{identifier}.json"
+    # Validate before constructing a filesystem path.
+    try:
+        if not isinstance(identifier, str) or str(uuid.UUID(identifier)) != identifier:
+            raise ValueError
+    except ValueError:
+        raise ValueError("Invalid Impact id.") from None
+    relative = Path("impacts") / f"{identifier}.json"
     existing = root / relative
     if not comment and existing.exists():
         raise ValueError("That id already exists. Use the record's original Issue for updates.")
     if comment and not existing.exists():
         raise ValueError("The accepted record is missing; ask a moderator to investigate.")
-    for field in ("contributors", "cites"):
-        if isinstance(record.get(field), str):
-            record[field] = names(record[field])
     if comment and record == json.loads(existing.read_text()):
         raise ValueError("No changes to the accepted record.")
     with tempfile.TemporaryDirectory() as directory:
@@ -131,7 +128,7 @@ def process(event, root, api):
     if comment:
         if body.splitlines()[:1] != ["/update"]:
             return
-    elif not re.search(r"^### (Impact JSON|Profile JSON)$", body, re.M):
+    elif not re.search(r"^### Impact JSON$", body, re.M):
         return
     number = issue["number"]
     try:
@@ -183,12 +180,21 @@ def process(event, root, api):
         api.call("POST", "git/refs", {"ref": f"refs/heads/{branch}", "sha": commit["sha"]})
     source = (comment or issue)["html_url"]
     checklist = (Path(__file__).resolve().parents[1] / ".github/pull_request_template.md").read_text()
+    if comment:
+        checklist += "\n- [ ] Are the changes justified and unrelated accepted details preserved?\n"
+    image_preview = ''
+    if record.get('image'):
+        # Encode Markdown delimiters so the URL cannot break out of the image.
+        image_url = quote(record['image'], safe=':/?&=%+#@!$;,~*-._')
+        image_preview = f"### Image preview\n\n![Submitted impact image](<{image_url}>)\n\n"
+    preview = (f"## {record['title']}\n\n{record['description']}\n\n"
+               f"### Impact occurred by\n\n{record['occurred_by']}\n\n### Sources\n\n"
+               + '\n'.join(f"- <{quote(url, safe=':/?&=%+#@!$;,~*-._')}>" for url in record['sources']) + '\n\n')
     pr = api.call("POST", "pulls", {
-        "title": f"{'Update' if comment else 'Add'} {relative} (Issue #{number})",
+        "title": ("Update: " if comment else "") + record["title"],
         "head": branch, "base": event["repository"]["default_branch"],
         "body": f"Source submission: {source}\n\nRelated Issue: #{number}\n\n"
-                "Generated deterministically from submitted JSON; no LLM. "
-                "Keep the Issue open for later updates.\n\n" + checklist,
+                + preview + image_preview + checklist,
     })
     api.comment_once(number, f"Ready for moderator review: {pr['html_url']}\n\n"
                      f"Record: `data/{relative.as_posix()}`. After merge, post `/update` "

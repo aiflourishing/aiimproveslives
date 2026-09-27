@@ -4,21 +4,19 @@ title: '[Impact] '
 body:
   - type: markdown
     attributes:
-      value: 'Complete the JSON below. Describe what the project does, how many people benefited, and what improved in their lives; support claims with sources. Say when numbers are unknown. A moderator reviews the generated PR. Submit a new Profile first if needed.'
+      value: 'Complete the JSON below. Describe what the AI system does, how many people benefited, and what improved in their lives; support claims with sources. Say when numbers are unknown. A moderator reviews the generated PR.'
   - type: textarea
     id: record
     attributes:
       label: Impact JSON
-      description: 'Do not add an id. Optional fields: contributors and cites (lists or comma-separated names), image (direct HTTPS URL).'
+      description: 'Do not add an id. occurred_by: Date by which impact occurred, in YYYY/MM/DD format. Optional field: image (direct HTTPS URL).'
       render: json
       value: |
         {
-          "profile_id": "@project-id",
           "title": "",
           "description": "",
-          "sources": ["https://"],
-          "contributors": [],
-          "cites": []
+          "occurred_by": "YYYY/MM/DD",
+          "sources": ["https://"]
         }
     validations:
       required: true
@@ -30,9 +28,3 @@ body:
       options: ['Yes', 'No']
     validations:
       required: true
-  - type: checkboxes
-    id: image
-    attributes:
-      label: Image permission
-      options:
-        - label: I have permission to publish any supplied image.

@@ -1,0 +1,87 @@
+/* Static content works without JavaScript. Rankings come only from the server. */
+(() => {
+  const search = document.querySelector('#search');
+  if (search) {
+    const form = search.closest('form');
+    const clear = form.querySelector('button');
+    const grid = document.querySelector('#impacts .card-grid');
+    const cards = [...grid.querySelectorAll('.card')];
+    const buttons = [...document.querySelectorAll('[data-sort]')];
+    const params = new URLSearchParams(location.search);
+    let order = params.get('sort') === 'new' ? 'new' : 'top';
+    let ranking = null;
+    let rankMessage = '';
+    search.value = params.get('q') || '';
+    function filter(updateURL = true) {
+      const terms = search.value.toLowerCase().trim().split(/\s+/).filter(Boolean);
+      const ranks = new Map((ranking || []).map((id, index) => [id, index]));
+      const ordered = order === 'top' && ranking !== null
+        ? [...cards].sort((a, b) => (ranks.get(a.dataset.impact) ?? Infinity) - (ranks.get(b.dataset.impact) ?? Infinity))
+        : cards;
+      grid.append(...ordered);
+      let count = 0;
+      cards.forEach(card => {
+        card.hidden = !terms.every(term => card.dataset.search.includes(term));
+        if (!card.hidden) count++;
+      });
+      const empty = document.querySelector('#impacts .empty');
+      empty.hidden = count > 0;
+      empty.textContent = cards.length ? 'No results. Try a different search.' : 'No listings yet.';
+      buttons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.sort === order)));
+      const status = document.querySelector('#ranking-status');
+      status.hidden = !rankMessage || order !== 'top' || ranking !== null || !cards.length;
+      status.textContent = rankMessage;
+      clear.hidden = !search.value;
+      document.querySelector('#search-status').textContent = `${count} ${count === 1 ? 'result' : 'results'} found.`;
+      if (updateURL) {
+        const url = new URL(location.href);
+        search.value ? url.searchParams.set('q', search.value) : url.searchParams.delete('q');
+        order === 'new' ? url.searchParams.set('sort', 'new') : url.searchParams.delete('sort');
+        url.searchParams.delete('year');
+        history.replaceState(null, '', url);
+      }
+    }
+    buttons.forEach(button => button.addEventListener('click', () => { order = button.dataset.sort; filter(); }));
+    window.addEventListener('impact-ranking', event => {
+      ranking = event.detail.ids;
+      rankMessage = event.detail.message || 'Couldn’t load Top. Showing newest first.';
+      filter(false);
+    });
+    search.addEventListener('input', () => filter());
+    form.addEventListener('submit', event => event.preventDefault());
+    form.addEventListener('reset', event => { event.preventDefault(); search.value = ''; filter(); search.focus(); });
+    filter(false);
+  }
+  // Replace broken card images with the brand placeholder.
+  document.addEventListener('error', event => {
+    const img = event.target;
+    if (!(img instanceof HTMLImageElement)) return;
+    if (img.classList.contains('card-image')) {
+      const placeholder = document.createElement('div');
+      placeholder.className = 'card-image image-empty';
+      placeholder.setAttribute('aria-hidden', 'true');
+      placeholder.innerHTML = '<span class="brand-mark">aı</span>';
+      img.replaceWith(placeholder);
+    } else img.hidden = true;
+  }, true);
+})();
+
+// Refresh the local home preview when its approved catalog or template changes.
+if (['localhost', '127.0.0.1'].includes(location.hostname) && document.querySelector('#impacts')) {
+  (async () => {
+    let version;
+    async function checkBuild() {
+      try {
+        const response = await fetch('/__preview_version', { cache: 'no-store' });
+        if (!response.ok) return false;
+        const current = (await response.json()).version;
+        if (version !== undefined && current !== version) { location.reload(); return false; }
+        version = current;
+        return true;
+      } catch { return false; }
+    }
+    if (await checkBuild()) {
+      const timer = setInterval(async () => { if (!await checkBuild()) clearInterval(timer); }, 5000);
+    }
+  })();
+}
