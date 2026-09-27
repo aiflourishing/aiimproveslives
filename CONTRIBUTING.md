@@ -1,6 +1,6 @@
 # Submit an Impact
 
-Read the [acceptance criteria](entry-criteria.md), then open an [Impact Issue](https://github.com/aiflourishing/aiimproveslives/issues/new/choose). Fill in the JSON and contributor-status answer. Code validates the submission and opens a linked PR for human review. Edit invalid submissions to retry. Keep the Issue open after acceptance for updates.
+Read the [acceptance criteria](entry-criteria.md), then use the website’s Contribute form. Alternatively, open an [Impact Issue](https://github.com/aiflourishing/aiimproveslives/issues/new/choose) and fill in the JSON and contributor-status answer. Code validates the submission and opens a linked PR for human review. Edit invalid submissions to retry. Keep the Issue open after acceptance for updates.
 
 An Impact describes an AI system and its realized benefit. Name the system and those responsible in the title or description where relevant.
 
@@ -16,7 +16,7 @@ An Impact describes an AI system and its realized benefit. Name the system and t
 | `submitter_is_contributor` | `true` or `false`, populated from the Issue form's contributor-status answer |
 | `image` | Optional direct HTTPS image URL |
 
-Required text must be nonempty. The contributor-status answer is the original submitter's self-report; preserve it in updates unless correcting that answer. Only supply images you have permission to publish. URL validation checks structure; moderators review the sources and image permission.
+Required text must be nonempty. Contributor status records the submitter’s answer. Image links must point directly to an HTTPS image; the website previews them before submission. Server validation checks URL structure, not ongoing availability.
 
 ## Updates
 
@@ -36,23 +36,23 @@ When realized impact changes significantly, post `/update` followed by the **com
 ```
 ````
 
-Copy the current record from `data/impacts/` and preserve its ID and unrelated details. Omitted optional fields are removed. Include supporting sources and confirm permission for any new image.
+Copy the current record from `data/impacts/` and preserve its ID and unrelated details. Omitted optional fields are removed. Include supporting sources and use a direct HTTPS URL for any image.
 
-Automation opens a new linked PR; moderators review its changes before merging. Ordinary comments are ignored. Anyone can propose an update, but an Issue can update only its own Impact. One PR per Issue can be pending: merge or close it before submitting another proposal. To correct a pending proposal, close its PR and edit the submission with corrected JSON.
+Automation opens a new linked PR; moderators review its changes before merging. Ordinary comments are ignored. Anyone can propose an update, but an Issue can update only its own Impact. One PR per Issue can be pending: merge or close it before submitting another proposal. Moderators can edit the impact JSON directly on the pending PR branch through Files changed → ⋯ → Edit file. Keep its ID unchanged. The committed record determines the published listing; changing the PR description does not change that record. To replace a pending proposal through Issue intake, close its PR and edit the submission with corrected JSON.
 
 Expand an existing Impact when reach or results change; open a new Issue for a distinct benefit.
 
 ## Repository setup
 
-After these files reach the default branch:
+For a new repository:
 
 - Enable Issues and Actions, and enable **Allow GitHub Actions to create and approve pull requests** in Actions settings. The workflow only creates PRs; it never approves or merges them.
 - Require human approval and the `validate` check on `main`; dismiss stale approvals when commits change. Assign moderators with permission to review and merge.
-- GitHub may ask a moderator to **Approve workflows to run** on bot-created PRs. Approve execution, then wait for validation before merging. No additional token is needed.
+- Intake validates the proposed catalog before creating a PR. On bot-created PRs, select **Approve workflows to run** if GitHub shows that banner, then wait for validation before merging. See [GitHub’s workflow-trigger rules](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow).
 
 The intake workflow runs trusted code from the default branch. Submitted text is parsed as data, never executed, and only record/mapping files are written to proposal branches. There are no LLM calls.
 
-After merge, the catalog workflow validates records and uploads `catalog.json` as an Actions artifact. This is ready for a future website build, but is not yet a public API or deployed website.
+After merge, the catalog workflow validates records and uploads `catalog.json` as an Actions artifact. The GitHub-backed local preview reads merged records automatically. Public website publishing is a separate setup described in README.md.
 
 Local checks (Python 3.9+, no dependencies):
 

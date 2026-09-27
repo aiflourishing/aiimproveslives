@@ -1,0 +1,52 @@
+const { PGlite } = require('@electric-sql/pglite');
+const { readFileSync } = require('node:fs');
+const assert = require('node:assert/strict');
+(async () => {
+  const db = new PGlite();
+  await db.exec(`create role anon; create role authenticated; create role service_role;
+    create schema auth; create schema private;
+    create table auth.users(id uuid primary key, email_confirmed_at timestamptz, is_anonymous boolean default false);`);
+  await db.exec(readFileSync('supabase/migrations/002_submissions.sql', 'utf8'));
+  const u = '10000000-0000-0000-0000-000000000001', v = '10000000-0000-0000-0000-000000000002';
+  const id = '20000000-0000-0000-0000-000000000001', other = '20000000-0000-0000-0000-000000000002';
+  await db.query('insert into auth.users values ($1, now(), false),($2,null,false)', [u,v]);
+  const reserve = (user=u, key=id, hash='a'.repeat(64)) => db.query('select public.reserve_submission($1,$2,$3) as receipt', [user,key,hash]).then(r=>r.rows[0].receipt);
+  for (const role of ['anon','authenticated']) {
+    await db.exec(`set role ${role}`);
+    await assert.rejects(reserve(), /permission denied/);
+    await assert.rejects(db.query('select * from private.submissions'), /permission denied/);
+    await assert.rejects(db.query('select public.finish_submission($1,$2,1)',[u,id]), /permission denied/);
+    await assert.rejects(db.query('select public.submission_receipt($1,$2)',[u,id]), /permission denied/);
+    await db.exec('reset role');
+  }
+  await db.exec('set role service_role');
+  await assert.rejects(reserve(v), /Verified sign-in/);
+  assert.equal((await reserve()).fresh, true);
+  assert.equal((await reserve()).fresh, false);
+  assert.equal((await reserve(u,other)).id, id); // Same content, different client id.
+  await assert.rejects(reserve(u,id,'b'.repeat(64)), /identifier already used/);
+  await assert.rejects(reserve(u,other,'b'.repeat(64)), /limit reached/);
+  assert.equal((await db.query('select public.submission_receipt($1,$2) as receipt',[v,id])).rows[0].receipt, null);
+  await db.query('select public.finish_submission($1,$2,42)',[v,id]);
+  assert.equal((await reserve()).status, 'pending');
+  await db.query('select public.finish_submission($1,$2,42)',[u,id]);
+  assert.equal((await reserve()).issue_number, 42);
+  await db.query('select public.finish_submission($1,$2,null)',[u,id]);
+  assert.equal((await reserve()).status, 'submitted');
+  await db.exec('reset role');
+  await db.exec("update private.submissions set created_at = now() - interval '2 minutes'");
+  await db.exec('set role service_role');
+  assert.equal((await reserve(u,other,'b'.repeat(64))).fresh, true);
+  await db.query('select public.finish_submission($1,$2,null)',[u,other]);
+  await assert.rejects(reserve(u,other,'b'.repeat(64)), /limit reached/);
+  await db.exec('reset role');
+  await db.exec("update private.submissions set created_at = now() - interval '2 minutes'");
+  await db.exec('set role service_role');
+  assert.equal((await reserve(u,other,'b'.repeat(64))).fresh, true);
+  await db.exec('reset role');
+  for (let n=3;n<=10;n++) await db.query("insert into private.submissions(id,user_id,payload_hash,created_at) values($1,$2,$3,now()-interval '2 minutes')",[`20000000-0000-0000-0000-${String(n).padStart(12,'0')}`,u,String(n).padStart(64,'0')]);
+  await db.exec("update private.submissions set created_at = now() - interval '2 minutes'");
+  await db.exec('set role service_role');
+  await assert.rejects(reserve(u,'20000000-0000-0000-0000-000000000011','c'.repeat(64)), /limit reached/);
+  await db.close(); console.log('Submission database checks passed: permissions, identity, duplicate receipts, cooldown, daily cap, safe retries.');
+})().catch(error=>{console.error(error);process.exitCode=1;});

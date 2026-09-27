@@ -10,4 +10,4 @@ Over time, make work that improves lives more visible and worth pursuing. Let th
 
 Build a resource that can inform public conversations and, eventually, policy. The collection documents benefits; it does not establish AI's overall balance of benefits and harms.
 
-Launch a small, compelling version within a week. Keep the website and contribution process simple enough for volunteers to maintain.
+Keep the website and contribution process simple enough for volunteers to maintain.

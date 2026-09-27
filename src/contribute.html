@@ -1,0 +1,21 @@
+<!-- Layout only. Edit visible wording in contribute-copy.md. -->
+<div class="reading contribute"><header id="contribute-intro"><h1>{{Page heading}}</h1>
+<p class="contribution-rules">{{Introduction}}</p></header>
+<noscript><p>Enable JavaScript to save your draft, or <a href="https://github.com/aiflourishing/aiimproveslives/issues/new?template=impact.yml">submit on GitHub</a>.</p></noscript>
+<div id="contribute-content"><form id="contribute-form"><fieldset id="contribute-fields"><legend class="sr-only">Impact details</legend>
+<div class="form-field"><label for="impact-title">{{Title label}} <span aria-hidden="true">*</span></label><input id="impact-title" name="title" maxlength="180" required placeholder="{{Title example}}"></div>
+<div class="form-field"><label for="impact-description">{{Description label}} <span aria-hidden="true">*</span></label><textarea id="impact-description" name="description" rows="4" maxlength="10000" required placeholder="{{Description placeholder}}"></textarea></div>
+<div class="form-field"><label for="impact-sources">{{Sources label}} <span aria-hidden="true">*</span></label>
+<div id="source-list"><div class="source-row"><input id="impact-sources" name="sources" type="url" maxlength="2048" required aria-label="Source 1" placeholder="{{Source placeholder}}"><button type="button" class="source-remove" aria-label="Remove source 1" hidden>×</button></div></div>
+<button id="add-source" class="text-button" type="button">{{Add source button}}</button></div>
+<div class="form-row"><div class="form-field"><label for="impact-date">{{Date label}} <span aria-hidden="true">*</span></label><input id="impact-date" name="occurred_by" type="text" placeholder="yyyy/mm/dd" inputmode="numeric" maxlength="10" pattern="[0-9]{4}/[0-9]{2}/[0-9]{2}" required></div>
+<div class="form-field"><label for="impact-contributor">{{Contributor question}} <span aria-hidden="true">*</span></label><select id="impact-contributor" name="submitter_is_contributor" required><option value="">{{Contributor default answer}}</option><option value="true">{{Contributor yes answer}}</option><option value="false">{{Contributor no answer}}</option></select></div></div>
+<div class="form-field"><label for="impact-image">{{Image label}}</label><input id="impact-image" name="image" type="url" maxlength="2048" placeholder="{{Image example}}" aria-describedby="image-status"><p id="image-status" class="field-hint" role="status" hidden></p><img id="image-preview" alt="Image preview" hidden></div>
+<div class="form-footer"><button class="action-button" type="submit">{{Submit button}} <span aria-hidden="true">↗</span></button></div>
+</fieldset></form>
+<div id="submission-result" role="status" aria-live="polite" tabindex="-1" hidden><div id="submission-success" hidden>
+<svg class="success-check" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="31"/><path d="m20 32 8 8 16-17"/></svg>
+<h2>{{Confirmation heading}}</h2>
+<p>{{Confirmation — before link}} <span id="review-pending">{{Confirmation — link text}}</span><a id="submission-pr" target="_blank" rel="noopener" hidden>{{Confirmation — link text}}</a> {{Confirmation — after link}}</p>
+</div><p id="submission-message"></p></div>
+</div></div>

@@ -1,4 +1,4 @@
-"""Build the static catalog consumed by the future website."""
+"""Build the validated catalog consumed by the website."""
 
 import json
 from pathlib import Path
