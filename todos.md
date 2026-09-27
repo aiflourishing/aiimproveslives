@@ -8,7 +8,7 @@
 - [x] Deploy the submission function and verify a submission through review and merge.
 - [x] Show approved GitHub records in the local preview.
 - [x] Activate the GitHub reaction-sync workflow.
-- [ ] Publish the local website build workflow to GitHub.
+- [x] Publish the website build workflow with full validation before deployment.
 - [ ] Configure public hosting, domains, and production sign-in/submission origins.
 - [ ] Verify reaction sync and voting on the production site.
 - [ ] Select and review the initial collection for launch.
