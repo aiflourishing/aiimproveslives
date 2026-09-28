@@ -1,0 +1,12 @@
+{
+  "title": "OpenStreetMap's fAIr helps disaster response",
+  "description": "fAIr is the OpenStreetMap's AI system for identifying buildings and damage in aerial imagery to help responders locate communities needing assistance. For example, during the June 24 earthquakes in Venezuela, fAIr helped early responders prioritize search and rescue across three cities. Another example is fAIr helping city planners map trees and solar panels in Freetown in Sierra Leone for cooling and emergency planning.",
+  "occurred_by": "2026/08/27",
+  "sources": [
+    "https://github.com/hotosm/fAIr",
+    "https://aws.amazon.com/blogs/publicsector/how-hot-uses-open-source-on-aws-to-power-humanitarian-ai/"
+  ],
+  "submitter_is_contributor": false,
+  "image": "https://d2908q01vomqb2.cloudfront.net/9e6a55b6b4563e652a23be9d623ca5055c356940/2026/08/22/Figure-4-fAIr-damage-assessment-model-predicting-different-levels-of-damage-based-on-pre-and-post-event-imagery.png",
+  "id": "ed8d3f35-a311-54ef-8a37-cca1f454cba2"
+}
