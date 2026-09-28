@@ -90,3 +90,16 @@ class SiteTests(unittest.TestCase):
         (self.data / f'impacts/{self.identifier}.json').unlink()
         build(self.data, self.output, self.source)
         self.assertFalse((self.output / f'impacts/{self.identifier}').exists())
+
+    def test_top_is_baked_into_html_without_losing_new_order(self):
+        self.populate()
+        second = '12345678-1234-1234-1234-123456789abd'
+        (self.data / f'impacts/{second}.json').write_text(json.dumps({**self.impact, 'id': second, 'occurred_by': '2026/01/03'}))
+        build(self.data, self.output, self.source, ranking=[{'impact_id': self.identifier, 'score': 8}])
+        home = (self.output / 'index.html').read_text()
+        self.assertLess(home.index(f'data-impact="{self.identifier}"'), home.index(f'data-impact="{second}"'))
+        self.assertIn(f'data-new-order="1"', home)
+        self.assertIn('id="initial-ranking"', home)
+        self.assertIn(f'data-score-for="{self.identifier}" aria-label="Score 8">8</span>', home)
+        initial = home.split('id="initial-ranking">')[1].split('</script>')[0]
+        self.assertEqual(json.loads(initial), [self.identifier, second])

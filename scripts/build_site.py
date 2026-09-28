@@ -74,8 +74,10 @@ def date(record):
     return datetime.strptime(record['occurred_by'], '%Y/%m/%d').strftime('%B %d, %Y').replace(' 0', ' ')
 
 
-def reactions(identifier):
-    return f'''<div class="reactions" role="group" aria-label="Rate this listing" data-impact="{identifier}"><button type="button" data-reaction="heart" aria-label="Like" title="Like" aria-pressed="false">❤️</button><span class="vote-score" data-score-for="{identifier}" hidden></span><button type="button" data-reaction="confused" aria-label="Dislike" title="Dislike" aria-pressed="false">👎</button></div>'''
+def reactions(identifier, score=None):
+    visible_score = str(score) if isinstance(score, int) and not isinstance(score, bool) and score > 5 else ''
+    score_attributes = f' aria-label="Score {visible_score}"' if visible_score else ' hidden'
+    return f'''<div class="reactions" role="group" aria-label="Rate this listing" data-impact="{identifier}"><button type="button" data-reaction="heart" aria-label="Like" title="Like" aria-pressed="false">❤️</button><span class="vote-score" data-score-for="{identifier}"{score_attributes}>{visible_score}</span><button type="button" data-reaction="confused" aria-label="Dislike" title="Dislike" aria-pressed="false">👎</button></div>'''
 
 
 def share_control(record):
@@ -84,13 +86,13 @@ def share_control(record):
 
 
 
-def card(record, prefix='./'):
+def card(record, prefix='./', new_order=0, score=None):
     description = record['description']
     excerpt = description[:140] + ('...' if len(description) > 140 else '')
     search = ' '.join([record['title'], description])
-    return f'''<article class="card" data-impact="{record['id']}" data-search="{esc(search.lower())}">
+    return f'''<article class="card" data-impact="{record['id']}" data-search="{esc(search.lower())}" data-new-order="{new_order}">
 {photo(record)}<div class="card-body"><div class="card-title"><h3><a class="impact-link" href="{prefix}impacts/{record['id']}/">{esc(record['title'])}</a></h3></div>
-<p>{esc(excerpt)}</p><div class="card-actions">{reactions(record["id"])}{share_control(record)}</div></div></article>'''
+<p>{esc(excerpt)}</p><div class="card-actions">{reactions(record["id"], score)}{share_control(record)}</div></div></article>'''
 
 
 def links(record):
@@ -113,7 +115,7 @@ def added_at(root, record):
         return record['occurred_by'].replace('/', '-')
 
 
-def build(root=ROOT, output=Path('dist'), source=SOURCE):
+def build(root=ROOT, output=Path('dist'), source=SOURCE, ranking=None):
     catalog = load_catalog(root)
     impacts = catalog['impacts']
     output.mkdir(parents=True, exist_ok=True)
@@ -126,11 +128,21 @@ def build(root=ROOT, output=Path('dist'), source=SOURCE):
     shutil.copytree(source / 'vendor', output / 'vendor', dirs_exist_ok=True)
     (output / '.nojekyll').touch()
     ordered = sorted(impacts.values(), key=lambda r: (added_at(root, r), r['id']), reverse=True)
-    new_cards = ''.join(card(r) for r in ordered)
+    new_order = {record['id']: index for index, record in enumerate(ordered)}
+    scores = {row['impact_id']: row.get('score') for row in (ranking or []) if row.get('impact_id') in impacts}
+    initial_ranking = None
+    if ranking is not None:
+        ids = [row['impact_id'] for row in ranking if row.get('impact_id') in impacts]
+        ids = list(dict.fromkeys(ids))
+        initial_ranking = ids + [record['id'] for record in ordered if record['id'] not in ids]
+        ranks = {identifier: index for index, identifier in enumerate(initial_ranking)}
+        ordered.sort(key=lambda record: ranks[record['id']])
+    new_cards = ''.join(card(r, new_order=new_order[r['id']], score=scores.get(r['id'])) for r in ordered)
+    initial_data = '' if initial_ranking is None else '<script type="application/json" id="initial-ranking">' + json.dumps(initial_ranking) + '</script>'
     content = f'''<div class="page-top"><h1>AI Improves Lives</h1></div>
 <div class="listing-toolbar"><div class="sort-controls" role="group" aria-label="Order impacts"><button type="button" data-sort="top" aria-pressed="true">Top</button><button type="button" data-sort="new" aria-pressed="false">New</button></div><form class="search" role="search"><label class="sr-only" for="search">Search</label><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Search" autocomplete="off"><button type="reset" hidden>Clear</button></form></div>
 <p id="search-status" class="sr-only" role="status" aria-live="polite"></p><p id="ranking-status" class="ranking-status" role="status" hidden></p>
-<section id="impacts" aria-label="Impacts"><div class="card-grid">{new_cards}</div><p class="empty" {'hidden' if impacts else ''}>No listings yet.</p></section>'''
+<section id="impacts" aria-label="Impacts"><div class="card-grid">{new_cards}</div>{initial_data}<p class="empty" {'hidden' if impacts else ''}>No listings yet.</p></section>'''
     (output / 'index.html').write_text(page('Home', content, home=True, source=source), encoding='utf-8')
     about = output / 'about'
     about.mkdir(exist_ok=True)
@@ -141,7 +153,7 @@ def build(root=ROOT, output=Path('dist'), source=SOURCE):
     contribute_content = render_contribution(source)
     (contribute / 'index.html').write_text(page('Contribute', contribute_content, '../', source=source, path='contribute/'), encoding='utf-8')
     for record in impacts.values():
-        content = f'''<article class="reading listing-detail"><a class="back" href="../../#impacts"><span aria-hidden="true">←</span><span>All</span></a><header class="listing-heading"><h1>{esc(record['title'])}</h1>{photo(record, True)}</header><p class="description">{esc(record['description'])}</p><div class="detail-reactions">{reactions(record["id"])}{share_control(record)}</div>{links(record)}<p class="reported-date">Reported as of <time datetime="{record['occurred_by'].replace('/', '-')}">{date(record)}</time></p></article>'''
+        content = f'''<article class="reading listing-detail"><a class="back" href="../../#impacts"><span aria-hidden="true">←</span><span>All</span></a><header class="listing-heading"><h1>{esc(record['title'])}</h1>{photo(record, True)}</header><p class="description">{esc(record['description'])}</p><div class="detail-reactions">{reactions(record["id"], scores.get(record["id"]))}{share_control(record)}</div>{links(record)}<p class="reported-date">Reported as of <time datetime="{record['occurred_by'].replace('/', '-')}">{date(record)}</time></p></article>'''
         target = output / 'impacts' / record['id']
         target.mkdir(parents=True)
         (target / 'index.html').write_text(page(record['title'], content, '../../', source=source, path=f'impacts/{record["id"]}/'), encoding='utf-8')
@@ -149,4 +161,22 @@ def build(root=ROOT, output=Path('dist'), source=SOURCE):
 
 
 if __name__ == '__main__':
-    print(build())
+    import argparse
+    from urllib.request import Request, urlopen
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--live-ranking', action='store_true', help='Bake the public Top ranking into the page')
+    args = parser.parse_args()
+    ranking = None
+    if args.live_ranking:
+        try:
+            config = json.loads((SOURCE / 'voting-config.json').read_text())
+            request = Request(config['url'].rstrip('/') + '/rest/v1/rpc/impact_scores', data=b'{}', method='POST',
+                              headers={'apikey': config['publishableKey'], 'Content-Type': 'application/json'})
+            with urlopen(request, timeout=10) as response:
+                ranking = json.load(response)
+            if not isinstance(ranking, list):
+                raise ValueError('Invalid public ranking')
+        except (OSError, ValueError, KeyError):
+            print('Public ranking unavailable; building with newest fallback.')
+            ranking = None
+    print(build(ranking=ranking))

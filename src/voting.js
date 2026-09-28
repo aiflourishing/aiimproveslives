@@ -73,10 +73,22 @@
     votes = new Map(data.map(row => [row.impact_id, row.reaction === 'improved' ? 'heart' : row.reaction]));
     paintVotes();
   }
+  async function publicRanking(name) {
+    try {
+      const response = await fetch(new URL(`rest/v1/rpc/${name}`, config.url.replace(/\/?$/, '/')), {
+        method: 'POST', headers: { apikey: config.publishableKey, 'Content-Type': 'application/json' },
+        body: '{}', signal: AbortSignal.timeout(8000)
+      });
+      if (!response.ok) throw Error('Ranking unavailable');
+      const data = await response.json();
+      if (!Array.isArray(data)) throw Error('Invalid ranking');
+      return { data, error: null };
+    } catch (error) { return { data: null, error }; }
+  }
   async function refreshRanking(updateOrder = true) {
     if (!document.querySelector('[data-reaction]')) return;
     const request = ++scoreRequest;
-    const { data, error } = await client.rpc('impact_scores');
+    const { data, error } = await publicRanking('impact_scores');
     if (request !== scoreRequest) return;
     if (!error) {
       const scores = new Map(data.map(row => [row.impact_id, row.score]));
@@ -89,9 +101,10 @@
     }
     if (updateOrder && document.querySelector('#impacts')) {
       // Older databases still provide ordering while the aggregate RPC is being deployed.
-      const ranking = error ? await client.rpc('ranked_impacts') : { data, error: null };
+      const ranking = error ? await publicRanking('ranked_impacts') : { data, error: null };
       window.dispatchEvent(new CustomEvent('impact-ranking', { detail: {
         ids: ranking.error ? null : ranking.data.map(row => row.impact_id),
+        rows: error ? null : data,
         message: 'Couldn’t load Top. Showing newest first.'
       }}));
     }
@@ -147,6 +160,15 @@
       if (!config.url || !config.publishableKey) {
         state = 'unconfigured'; return;
       }
+      // Public rankings start before downloading the sign-in SDK or resolving a session.
+      refreshRanking().catch(() => {});
+      if (document.querySelector('[data-reaction]')) {
+        const refreshVisibleScores = () => {
+          if (document.visibilityState === 'visible') refreshRanking(false).catch(() => {});
+        };
+        setInterval(refreshVisibleScores, 30000);
+        document.addEventListener('visibilitychange', refreshVisibleScores);
+      }
       await new Promise((resolve, reject) => {
         const script = document.createElement('script');
         script.src = new URL('vendor/supabase.js', base).href;
@@ -175,17 +197,10 @@
         setTimeout(() => refreshVotes().catch(() => showStatus('Could not load your reactions.')), 0);
       });
       // Voting failures must not disable a working sign-in or contribution form.
-      Promise.all([refreshVotes(), refreshRanking()]).catch(() => showStatus('Could not load reactions.'));
-      if (document.querySelector('[data-reaction]')) {
-        const refreshVisibleScores = () => {
-          if (document.visibilityState === 'visible') refreshRanking(false).catch(() => {});
-        };
-        setInterval(refreshVisibleScores, 30000);
-        document.addEventListener('visibilitychange', refreshVisibleScores);
-      }
+      refreshVotes().catch(() => showStatus('Could not load your reactions.'));
     } catch {
       state = 'error';
-      window.dispatchEvent(new CustomEvent('impact-ranking', { detail: { ids: null } }));
+      if (!config?.url) window.dispatchEvent(new CustomEvent('impact-ranking', { detail: { ids: null } }));
       if (document.querySelector('[data-reaction]')) showStatus('Voting is temporarily unavailable.');
     } finally { resolveReady(); window.dispatchEvent(new Event('impact-auth')); }
   }
