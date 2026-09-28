@@ -17,6 +17,74 @@ def esc(value):
     return html.escape(str(value), quote=True)
 
 
+def render_about(source):
+    """Render the About page's basic Markdown without build dependencies.
+
+    Supports headings, paragraphs, flat bullet lists, bold, italic, and links.
+    Raw HTML is escaped; links accept only web, email, or local destinations.
+    """
+    def inline(text):
+        def token(match):
+            label, url, bold, italic = match.groups()
+            if label is not None:
+                if url == '#share':
+                    return ('<span class="share-control inline-share">'
+                            '<button type="button" class="inline-share-button" '
+                            'data-share-url="https://aiimproveslives.com/about/" '
+                            'data-share-title="AI Improves Lives" hidden>' + inline(label) + '</button>'
+                            '<span class="share-toast" role="status" hidden></span>'
+                            '<label class="share-fallback" hidden>Copy this link'
+                            '<input type="url" readonly aria-label="Page link"></label></span>')
+                from urllib.parse import urlsplit
+                if urlsplit(url).scheme.lower() not in ('', 'http', 'https', 'mailto'):
+                    return esc(match[0])
+                return f'<a href="{esc(url)}">{inline(label)}</a>'
+            if bold is not None:
+                return f'<strong>{esc(bold)}</strong>'
+            return f'<em>{esc(italic)}</em>'
+
+        pattern = re.compile(r'\[([^\]\n]+)\]\(([^\s()]+)\)|\*\*(.+?)\*\*|\*([^*]+)\*')
+        result = []
+        start = 0
+        for match in pattern.finditer(text):
+            result.extend((esc(text[start:match.start()]), token(match)))
+            start = match.end()
+        result.append(esc(text[start:]))
+        return ''.join(result)
+
+    blocks = []
+    paragraph = []
+    bullets = []
+
+    def flush():
+        if paragraph:
+            blocks.append('<p>' + inline(' '.join(paragraph)) + '</p>')
+            paragraph.clear()
+        if bullets:
+            blocks.append('<ul>' + ''.join('<li>' + inline(item) + '</li>' for item in bullets) + '</ul>')
+            bullets.clear()
+
+    for line in (source / 'about.md').read_text(encoding='utf-8').splitlines():
+        line = line.strip()
+        heading = re.fullmatch(r'(#{1,6})\s+(.+)', line)
+        bullet = re.fullmatch(r'[-*]\s+(.+)', line)
+        if not line or heading:
+            flush()
+            if heading:
+                level = len(heading[1])
+                blocks.append(f'<h{level}>' + inline(heading[2]) + f'</h{level}>')
+        elif bullet:
+            if paragraph:
+                flush()
+            bullets.append(bullet[1])
+        else:
+            if bullets:
+                flush()
+            paragraph.append(line)
+    flush()
+    return '<article class="reading about blog-post">\n' + '\n'.join(blocks) + '\n</article>\n'
+
+
 def contribution_copy(source):
     text = (source / 'contribute-copy.md').read_text(encoding='utf-8')
     parts = re.split(r'^## (.+)\n', text, flags=re.M)
@@ -146,7 +214,7 @@ def build(root=ROOT, output=Path('dist'), source=SOURCE, ranking=None):
     (output / 'index.html').write_text(page('Home', content, home=True, source=source), encoding='utf-8')
     about = output / 'about'
     about.mkdir(exist_ok=True)
-    about_content = (source / 'about.html').read_text(encoding='utf-8')
+    about_content = render_about(source)
     (about / 'index.html').write_text(page('About', about_content, '../', source=source, path='about/'), encoding='utf-8')
     contribute = output / 'contribute'
     contribute.mkdir(exist_ok=True)

@@ -16,7 +16,7 @@ class SiteTests(unittest.TestCase):
             (self.data / kind).mkdir(parents=True)
         self.source = self.base / 'src'
         self.source.mkdir()
-        for filename in ['styles.css', 'site.js', 'voting.js', 'contribute.js', 'contribute.html', 'contribute-copy.md', 'about.html', 'voting-config.json']:
+        for filename in ['styles.css', 'site.js', 'voting.js', 'contribute.js', 'contribute.html', 'contribute-copy.md', 'about.md', 'voting-config.json']:
             (self.source / filename).write_text((SOURCE / filename).read_text())
         shutil.copytree(SOURCE / 'vendor', self.source / 'vendor')
         self.output = self.base / 'dist'
@@ -29,6 +29,27 @@ class SiteTests(unittest.TestCase):
     def test_empty_catalog_builds(self):
         build(self.data, self.output, self.source)
         self.assertIn('No listings yet.', (self.output / 'index.html').read_text())
+
+    def test_about_markdown_renders_local_edits(self):
+        (self.source / 'about.md').write_text('# Our purpose\n\nA **bold** idea with *emphasis* and [examples](/).\nContinued here.\n\n## Get involved\n\n- Share an example\n- Read [the criteria](https://example.org/criteria?a=1&b=2)\n')
+        build(self.data, self.output, self.source)
+        about = (self.output / 'about/index.html').read_text()
+        self.assertIn('<article class="reading about blog-post">', about)
+        self.assertIn('<h1>Our purpose</h1>', about)
+        self.assertIn('<strong>bold</strong>', about)
+        self.assertIn('<em>emphasis</em>', about)
+        self.assertIn('<a href="/">examples</a>. Continued here.</p>', about)
+        self.assertIn('<h2>Get involved</h2>', about)
+        self.assertIn('<ul><li>Share an example</li>', about)
+        self.assertIn('href="https://example.org/criteria?a=1&amp;b=2"', about)
+
+    def test_about_markdown_escapes_html_and_unsafe_links(self):
+        (self.source / 'about.md').write_text('# About\n\n<script>alert(1)</script> [bad](javascript:alert) **<img>**\n')
+        build(self.data, self.output, self.source)
+        about = (self.output / 'about/index.html').read_text()
+        self.assertIn('&lt;script&gt;alert(1)&lt;/script&gt;', about)
+        self.assertIn('<strong>&lt;img&gt;</strong>', about)
+        self.assertNotIn('href="javascript:', about)
 
     def test_real_pages_links_excerpt_and_escaping(self):
         self.populate()

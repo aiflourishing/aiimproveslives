@@ -664,6 +664,8 @@ dialog p { font-size: 14px; line-height: 1.6; margin: 18px 0; }
 .share-button:hover { background: #eff0e6; color: var(--ink); }
 .share-button:disabled { cursor: wait; }
 .share-control { position: relative; }
+.inline-share-button { padding: 0; border: 0; background: transparent; font: inherit; color: inherit; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
+.inline-share-button:disabled { cursor: wait; }
 .share-toast { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); padding: 9px 13px; border-radius: 8px; background: var(--ink); color: var(--paper); font-size: 13px; white-space: nowrap; box-shadow: 0 4px 16px #243e341a; pointer-events: none; z-index: 3; }
 .share-toast::after { content: ''; position: absolute; top: 100%; left: calc(50% - 4px); border: 4px solid transparent; border-top-color: var(--ink); }
 .footer-share-button { min-height: 44px; padding: 8px 0; border: 0; background: transparent; color: var(--muted); font-size: 16px; line-height: 1.5; cursor: pointer; text-align: left; }
