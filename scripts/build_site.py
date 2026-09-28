@@ -146,7 +146,7 @@ def date(record):
 def reactions(identifier, score=None):
     visible_score = str(score) if isinstance(score, int) and not isinstance(score, bool) and score > 5 else ''
     score_attributes = f' aria-label="Score {visible_score}"' if visible_score else ' hidden'
-    return f'''<div class="reactions" role="group" aria-label="Rate this listing" data-impact="{identifier}"><button type="button" data-reaction="heart" aria-label="Like" title="Like" aria-pressed="false">❤️</button><span class="vote-score" data-score-for="{identifier}"{score_attributes}>{visible_score}</span><button type="button" data-reaction="confused" aria-label="Dislike" title="Dislike" aria-pressed="false">👎</button></div>'''
+    return f'''<div class="reactions" role="group" aria-label="Rate this listing" data-impact="{identifier}"><button type="button" data-reaction="heart" aria-label="Like" title="Like" aria-pressed="false">❤️</button><span class="vote-score" data-score-for="{identifier}"{score_attributes}>{visible_score}</span></div>'''
 
 
 def share_control(record):

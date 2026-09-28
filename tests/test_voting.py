@@ -20,7 +20,8 @@ class FakeGitHub:
 
 class VotingTests(unittest.TestCase):
     def test_all_eight_github_reactions_have_requested_weights(self):
-        self.assertEqual({k for k, v in GITHUB_SCORES.items() if v < 0}, {'-1', 'confused'})
+        self.assertEqual({k for k, v in GITHUB_SCORES.items() if v < 0}, set())
+        self.assertEqual({k for k, v in GITHUB_SCORES.items() if v == 0}, {'-1', 'confused', 'laugh'})
         self.assertEqual({k for k, v in GITHUB_SCORES.items() if v > 0}, {'+1', 'heart', 'hooray', 'rocket', 'eyes'})
 
         self.assertEqual(GITHUB_SCORES['laugh'], 0)
