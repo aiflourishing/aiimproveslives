@@ -17,7 +17,8 @@
       shareStatus.textContent = '';
       fallback.hidden = true;
       try {
-        if (shareButton.dataset.shareUrl && typeof navigator.share === 'function') {
+        const useShareSheet = shareButton.dataset.shareUrl || window.matchMedia('(pointer: coarse)').matches;
+        if (useShareSheet && typeof navigator.share === 'function') {
           try {
             await navigator.share({ title: shareButton.dataset.shareTitle, url: input.value });
             return;
