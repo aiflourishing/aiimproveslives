@@ -7,7 +7,7 @@ const assert = require('node:assert/strict');
     create schema auth; create schema private;
     create table auth.users(id uuid primary key, email_confirmed_at timestamptz, is_anonymous boolean default false);`);
   await db.exec(readFileSync('supabase/migrations/002_submissions.sql', 'utf8'));
-  await db.exec(readFileSync('supabase/migrations/007_direct_pr_submissions.sql', 'utf8'));
+  await db.exec(readFileSync('supabase/migrations/008_direct_pr_submissions.sql', 'utf8'));
   const u = '10000000-0000-0000-0000-000000000001', v = '10000000-0000-0000-0000-000000000002';
   const id = '20000000-0000-0000-0000-000000000001', other = '20000000-0000-0000-0000-000000000002';
   await db.query('insert into auth.users values ($1, now(), false),($2,null,false)', [u,v]);

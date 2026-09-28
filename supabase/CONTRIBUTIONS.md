@@ -4,7 +4,7 @@ The Submit form creates a GitHub PR directly through `submit-impact`. No Issue i
 
 ## Deployment
 
-1. Apply migrations `002_submissions.sql` and `007_direct_pr_submissions.sql` after the voting database setup. Migration 007 preserves old Issue receipts and adds a private PR number and service-only completion function.
+1. Apply migrations `002_submissions.sql` and `008_direct_pr_submissions.sql` after the voting database setup. Migration 008 preserves old Issue receipts and adds a private PR number and service-only completion function.
 2. Scope a fine-grained GitHub token to **only aiflourishing/aiimproveslives** with **Contents: Read and write**, **Pull requests: Read and write**, **Commit statuses: Read and write**, and **Issues: Read** (to resolve older receipts). Store it as the Supabase secret `GITHUB_SUBMISSIONS_TOKEN`. An existing deployment can expand its current token permissions and keep the `GITHUB_ISSUES_TOKEN` secret name; both handlers accept it for compatibility. Never put privileged tokens in the repository or browser.
 3. Preserve `GITHUB_REPOSITORY=aiflourishing/aiimproveslives` and `ALLOWED_ORIGINS` for localhost and the production origins. Hosted Supabase provides its own `SUPABASE_URL` and service role key.
 4. Deploy `submit-impact` and `review-checklist` with the Supabase CLI:
