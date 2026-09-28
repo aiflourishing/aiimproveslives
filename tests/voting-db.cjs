@@ -24,6 +24,13 @@ const assert = require('node:assert/strict');
   const v = '10000000-0000-0000-0000-000000000002';
   const unverified = '10000000-0000-0000-0000-000000000003';
   await db.query('insert into auth.users values ($1,now(),false),($2,now(),false),($3,null,false)', [u,v,unverified]);
+  // Upgrade a database with existing likes and dislikes without deleting votes.
+  await db.query('insert into private.impacts(id) values ($1),($2)', [a,b]);
+  await db.query("insert into private.reactions(user_id,impact_id,reaction) values ($1,$2,'improved'),($1,$3,'confused')", [u,a,b]);
+  await db.exec(readFileSync('supabase/migrations/007_positive_only_votes.sql','utf8'));
+  assert.equal((await db.query('select count(*)::int as count from private.reactions')).rows[0].count,2);
+  assert.deepEqual((await db.query('select * from public.ranked_impacts()')).rows.map(row=>row.impact_id),[a,b]);
+  await db.exec('delete from private.reactions; delete from private.impacts');
   async function actor(role, uid='') {
     await db.exec('reset role');
     await db.query("select set_config('request.jwt.claim.sub',$1,false)",[uid]);
@@ -50,12 +57,13 @@ const assert = require('node:assert/strict');
   await assert.rejects(db.query('select public.set_reaction($1,$2)',[u,'heart']), /Unknown impact/);
   await db.query('select public.set_reaction($1,$2)',[b,'heart']);
   assert.deepEqual(await rank(),[b,a]);
-  await assert.rejects(db.query('select public.set_reaction($1,$2)',[b,'confused']), /wait a moment/);
+  await assert.rejects(db.query('select public.set_reaction($1,$2)',[b,null]), /wait a moment/);
   await actor('authenticated',v);
   assert.deepEqual((await db.query('select * from public.my_reactions()')).rows,[]);
   await cooldown();
-  await db.query('select public.set_reaction($1,$2)',[b,'confused']);
-  assert.deepEqual(await rank(),[a,b]);
+  await assert.rejects(db.query('select public.set_reaction($1,$2)',[b,'confused']), /Invalid reaction/);
+  await db.query('select public.set_reaction($1,$2)',[b,'improved']);
+  assert.deepEqual(await rank(),[b,a]);
   assert.equal((await db.query('select * from public.my_reactions()')).rows.length,1);
   await cooldown();
   await db.query('select public.set_reaction($1,$2)',[b,null]);
@@ -71,17 +79,17 @@ const assert = require('node:assert/strict');
   await actor('service_role');
   await db.query('select public.sync_github_reactions($1,$2)',[[a,b],'[]']);
   assert.deepEqual(await rank(),[a,b]);
-  // A laugh on either side of the UUID tie-break must leave the order unchanged.
-  for (const target of [a,b]) {
+  // Every neutral GitHub reaction on either side of the tie must leave the order unchanged.
+  for (const reaction of ['-1','confused','laugh']) for (const target of [a,b]) {
     await actor('service_role');
-    const neutral = [{reaction_id:99,impact_id:target,github_user_id:42,reaction:'laugh',created_at:'2026-01-01T00:00:00Z'}];
+    const neutral = [{reaction_id:99,impact_id:target,github_user_id:42,reaction,created_at:'2026-01-01T00:00:00Z'}];
     await db.query('select public.sync_github_reactions($1,$2)',[[a,b],JSON.stringify(neutral)]);
     await actor('anon');
     assert.deepEqual(await rank(),[a,b]);
   }
   // Website and GitHub votes both contribute, even when the person is the same.
   await cooldown();
-  await db.query('select public.set_reaction($1,$2)',[b,'confused']);
+  await db.query('select public.set_reaction($1,$2)',[b,'heart']);
   await actor('service_role');
   const positive = ['heart','+1'].map((reaction,index)=>({reaction_id:index+20,impact_id:b,github_user_id:42,reaction,created_at:'2026-01-01T00:00:00Z'}));
   await db.query('select public.sync_github_reactions($1,$2)',[[a,b],JSON.stringify(positive)]);
@@ -104,7 +112,7 @@ const assert = require('node:assert/strict');
   assert.deepEqual(await rank(),[b,a]); // Legacy sync cannot erase the submission dates.
   await actor('authenticated',u);
   await assert.rejects(db.query('select public.sync_github_reactions($1,$2,$3)', [[a,b], '[]', '{}']), /permission denied/);
-  // Aggregates use the unchanged weights, suppress <= 5 on the server, and expose no voters.
+  // Positive-only aggregates suppress <= 5 on the server and expose no voters.
   const scoreRows = count => Array.from({length:count}, (_,index) => ({reaction_id:200+index,impact_id:a,github_user_id:200+index,reaction:'heart',created_at:'2026-01-01T00:00:00Z'}));
   for (const [count, expected] of [[0,null],[5,null],[6,6]]) {
     await actor('service_role');
@@ -116,13 +124,19 @@ const assert = require('node:assert/strict');
     assert.deepEqual(Object.keys(scores[0]).sort(),['impact_id','score']);
   }
   await actor('service_role');
-  const mixed = [...scoreRows(7),{reaction_id:299,impact_id:a,github_user_id:299,reaction:'confused',created_at:'2026-01-01T00:00:00Z'}, {reaction_id:300,impact_id:a,github_user_id:300,reaction:'laugh',created_at:'2026-01-01T00:00:00Z'}];
+  const mixed = [...scoreRows(7),{reaction_id:299,impact_id:a,github_user_id:299,reaction:'confused',created_at:'2026-01-01T00:00:00Z'}, {reaction_id:300,impact_id:a,github_user_id:300,reaction:'laugh',created_at:'2026-01-01T00:00:00Z'}, {reaction_id:301,impact_id:a,github_user_id:301,reaction:'-1',created_at:'2026-01-01T00:00:00Z'}];
   await db.query('select public.sync_github_reactions($1,$2)',[[a,b],JSON.stringify(mixed)]);
   await cooldown();
-  await db.query('select public.set_reaction($1,$2)',[a,'confused']);
-  assert.equal((await db.query('select * from public.impact_scores()')).rows.find(row=>row.impact_id===a).score,null);
+  await assert.rejects(db.query('select public.set_reaction($1,$2)',[a,'confused']), /Invalid reaction/);
+  // Historical website dislikes and imported negatives cannot cancel out likes.
+  await db.exec('reset role');
+  await db.query("insert into private.reactions(user_id,impact_id,reaction) values ($1,$2,'confused')",[v,a]);
+  assert.equal((await db.query('select * from public.impact_scores()')).rows.find(row=>row.impact_id===a).score,7);
   await cooldown();
   await db.query('select public.set_reaction($1,$2)',[a,'heart']);
+  assert.equal((await db.query('select * from public.impact_scores()')).rows.find(row=>row.impact_id===a).score,8);
+  await cooldown();
+  await db.query('select public.set_reaction($1,$2)',[a,null]);
   assert.equal((await db.query('select * from public.impact_scores()')).rows.find(row=>row.impact_id===a).score,7);
   await db.close();
   console.log('Database checks passed: private rows, verified auth, write restrictions, rate limit, replacement/removal, all eight GitHub weights, combined score, snapshot removal.');

@@ -7,7 +7,7 @@ from urllib.parse import urlsplit
 from scripts.catalog import ROOT, load_catalog
 from scripts.intake import GitHub
 
-GITHUB_SCORES = {'+1': 1, '-1': -1, 'laugh': 0, 'confused': -1,
+GITHUB_SCORES = {'+1': 1, '-1': 0, 'laugh': 0, 'confused': 0,
                  'heart': 1, 'hooray': 1, 'rocket': 1, 'eyes': 1}
 
 
