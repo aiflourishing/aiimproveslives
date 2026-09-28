@@ -2,7 +2,7 @@
 
 The website is static; Supabase hosts authentication and the private database. The current project allows localhost, the GitHub Pages callback, and both production domain callbacks. The steps below describe setup for a new project.
 
-1. Create a Supabase Free project. Run `migrations/001_reactions.sql`, then `migrations/003_neutral_laugh.sql` `migrations/004_highlight_submission_order.sql`, and `migrations/005_sync_safe_updates.sql`, once each in its SQL Editor. Do not expose the `private` schema through the Data API.
+1. Create a Supabase Free project. Run `migrations/001_reactions.sql`, then `migrations/003_neutral_laugh.sql` `migrations/004_highlight_submission_order.sql`, `migrations/005_sync_safe_updates.sql`, and `migrations/006_public_vote_scores.sql`, once each in its SQL Editor. Do not expose the `private` schema through the Data API.
 2. Enable Google and GitHub in Supabase Authentication → Providers. Register OAuth applications with each provider and enter their client secrets in Supabase, not this repository. Use the Supabase callback URL shown by each provider configuration. See [Google setup](https://supabase.com/docs/guides/auth/social-login/auth-google) and [GitHub setup](https://supabase.com/docs/guides/auth/social-login/auth-github).
 3. In Auth URL Configuration, set the production site URL. Allow its exact `index.html` callback (including the repository subpath), plus `http://localhost:8000/index.html` for local testing. The client uses PKCE. Do not enable anonymous sign-in. Enable auth abuse controls/CAPTCHA as appropriate before public launch.
 4. Put the project URL and **publishable key** in `src/voting-config.json`. This file is public. Never put the service-role key or an OAuth secret here. Rebuild the website.
@@ -30,11 +30,11 @@ GitHub: each reaction on the **body of the earliest merged PR that added the imp
 
 GitHub reactions and website votes are added together without cross-platform deduplication, as requested. A person may also add several different reactions on GitHub; each contributes. Re-running sync replaces the complete GitHub snapshot atomically, so it cannot accumulate duplicate imports, and removed reactions disappear. Failed fetches leave the old snapshot intact.
 
-Top orders all matching impacts by accumulated score. Equal scores put later original submissions first (Issue creation time, then original PR creation time for records without an Issue; manual records use their first commit on main). Identical or missing timestamps fall back to UUID order. No minimum score or editorial boost is applied. The layout stays still while reacting; rankings refresh on the next page load. Search filters the loaded ranking; no year filter applies.
+Top orders all matching impacts by accumulated score. Equal scores put later original submissions first (Issue creation time, then original PR creation time for records without an Issue; manual records use their first commit on main). Identical or missing timestamps fall back to UUID order. No minimum score or editorial boost is applied. The combined score appears between the reaction buttons only above 5. Authoritative scores refresh after voting, every 30 seconds while the page is visible, and on returning to the tab. The layout stays still while voting; rankings refresh on the next page load. Search filters the loaded ranking; no year filter applies.
 
 ## Privacy and limits
 
-Private website rows store `user_id`, `impact_id`, `reaction`, `created_at`, and `updated_at`. Users may retrieve only their own current reactions through a function. Public ranking returns impact IDs in score order, without counts or voters. GitHub rows also store GitHub user ID, reaction ID, creation time, and sync time; their source reactions remain public on GitHub. Ranking order can reveal relative popularity; this is not anonymity against all inference.
+Private website rows store `user_id`, `impact_id`, `reaction`, `created_at`, and `updated_at`. Users may retrieve only their own current reactions through a function. The legacy ranking returns impact IDs in score order. The public `impact_scores()` function additionally returns combined scores only when above 5; lower scores are null. Neither function exposes voter identities or individual vote rows. GitHub rows also store GitHub user ID, reaction ID, creation time, and sync time; their source reactions remain public on GitHub. Ranking order can reveal relative popularity; this is not anonymity against all inference.
 
 Tables have RLS enabled and no browser table permissions. Narrow security-definer functions have a fixed empty search path and explicit grants. Only the service-role sync can populate approved impact IDs or import GitHub reactions. Website vote changes have a server-enforced one-second per-account cooldown, serialized across concurrent requests.
 
@@ -45,3 +45,5 @@ For an existing database that has not applied it, `migrations/003_neutral_laugh.
 For existing databases that have not applied it, run `migrations/004_highlight_submission_order.sql`, then run the community reaction sync to backfill original submission dates. The point weights are unchanged, including neutral GitHub 😄 reactions.
 
 Apply `005_sync_safe_updates.sql` after migration 004. It makes catalog sync compatible with Supabase safe-update checks without deleting website votes. The current project has this fix applied; GitHub sync runs after catalog merges and hourly.
+
+Apply `006_public_vote_scores.sql` to expose the thresholded aggregate scores used by the reaction controls. It preserves all existing votes, scoring weights, ranking tie-breaks, and authentication requirements.

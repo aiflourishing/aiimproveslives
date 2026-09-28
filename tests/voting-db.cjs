@@ -17,6 +17,7 @@ const assert = require('node:assert/strict');
   await db.exec(readFileSync('supabase/migrations/003_neutral_laugh.sql','utf8'));
   await db.exec(readFileSync('supabase/migrations/004_highlight_submission_order.sql','utf8'));
   await db.exec(readFileSync('supabase/migrations/005_sync_safe_updates.sql','utf8'));
+  await db.exec(readFileSync('supabase/migrations/006_public_vote_scores.sql','utf8'));
   const a = '00000000-0000-0000-0000-000000000001';
   const b = '00000000-0000-0000-0000-000000000002';
   const u = '10000000-0000-0000-0000-000000000001';
@@ -103,6 +104,26 @@ const assert = require('node:assert/strict');
   assert.deepEqual(await rank(),[b,a]); // Legacy sync cannot erase the submission dates.
   await actor('authenticated',u);
   await assert.rejects(db.query('select public.sync_github_reactions($1,$2,$3)', [[a,b], '[]', '{}']), /permission denied/);
+  // Aggregates use the unchanged weights, suppress <= 5 on the server, and expose no voters.
+  const scoreRows = count => Array.from({length:count}, (_,index) => ({reaction_id:200+index,impact_id:a,github_user_id:200+index,reaction:'heart',created_at:'2026-01-01T00:00:00Z'}));
+  for (const [count, expected] of [[0,null],[5,null],[6,6]]) {
+    await actor('service_role');
+    await db.query('select public.sync_github_reactions($1,$2)', [[a,b],JSON.stringify(scoreRows(count))]);
+    await actor('anon');
+    const scores = (await db.query('select * from public.impact_scores()')).rows;
+    assert.equal(scores.find(row=>row.impact_id===a).score, expected);
+    assert.deepEqual(scores.map(row=>row.impact_id),await rank());
+    assert.deepEqual(Object.keys(scores[0]).sort(),['impact_id','score']);
+  }
+  await actor('service_role');
+  const mixed = [...scoreRows(7),{reaction_id:299,impact_id:a,github_user_id:299,reaction:'confused',created_at:'2026-01-01T00:00:00Z'}, {reaction_id:300,impact_id:a,github_user_id:300,reaction:'laugh',created_at:'2026-01-01T00:00:00Z'}];
+  await db.query('select public.sync_github_reactions($1,$2)',[[a,b],JSON.stringify(mixed)]);
+  await cooldown();
+  await db.query('select public.set_reaction($1,$2)',[a,'confused']);
+  assert.equal((await db.query('select * from public.impact_scores()')).rows.find(row=>row.impact_id===a).score,null);
+  await cooldown();
+  await db.query('select public.set_reaction($1,$2)',[a,'heart']);
+  assert.equal((await db.query('select * from public.impact_scores()')).rows.find(row=>row.impact_id===a).score,7);
   await db.close();
   console.log('Database checks passed: private rows, verified auth, write restrictions, rate limit, replacement/removal, all eight GitHub weights, combined score, snapshot removal.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

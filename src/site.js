@@ -1,5 +1,43 @@
 /* Static content works without JavaScript. Rankings come only from the server. */
 (() => {
+  // Sharing is public and independent of the reaction sign-in flow.
+  document.querySelectorAll('[data-share-url], [data-copy-url]').forEach(shareButton => {
+    shareButton.hidden = false;
+    const control = shareButton.closest('.share-control');
+    const shareStatus = control.querySelector('.share-toast');
+    const fallback = control.querySelector('.share-fallback');
+    const input = fallback.querySelector('input');
+    let toastTimer;
+    input.value = shareButton.dataset.shareUrl || shareButton.dataset.copyUrl;
+    input.addEventListener('click', () => input.select());
+    shareButton.addEventListener('click', async () => {
+      shareButton.disabled = true;
+      clearTimeout(toastTimer);
+      shareStatus.hidden = true;
+      shareStatus.textContent = '';
+      fallback.hidden = true;
+      try {
+        if (shareButton.dataset.shareUrl && typeof navigator.share === 'function') {
+          try {
+            await navigator.share({ title: shareButton.dataset.shareTitle, url: input.value });
+            return;
+          } catch (error) {
+            if (error.name === 'AbortError') return;
+          }
+        }
+        await navigator.clipboard.writeText(input.value);
+        shareStatus.textContent = 'Link copied';
+        shareStatus.hidden = false;
+        toastTimer = setTimeout(() => { shareStatus.hidden = true; }, 2500);
+      } catch {
+        fallback.hidden = false;
+        input.focus();
+        input.select();
+      } finally {
+        shareButton.disabled = false;
+      }
+    });
+  });
   const search = document.querySelector('#search');
   if (search) {
     const form = search.closest('form');

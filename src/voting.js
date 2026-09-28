@@ -38,6 +38,7 @@
     }
   };
   let votes = new Map();
+  let scoreRequest = 0;
   let state = 'loading';
   let toastTimer;
   const showStatus = (message, quiet = false) => {
@@ -72,13 +73,28 @@
     votes = new Map(data.map(row => [row.impact_id, row.reaction === 'improved' ? 'heart' : row.reaction]));
     paintVotes();
   }
-  async function refreshRanking() {
-    if (!document.querySelector('#impacts')) return;
-    const { data, error } = await client.rpc('ranked_impacts');
-    window.dispatchEvent(new CustomEvent('impact-ranking', { detail: {
-      ids: error ? null : data.map(row => row.impact_id),
-      message: 'Couldn’t load Top. Showing newest first.'
-    }}));
+  async function refreshRanking(updateOrder = true) {
+    if (!document.querySelector('[data-reaction]')) return;
+    const request = ++scoreRequest;
+    const { data, error } = await client.rpc('impact_scores');
+    if (request !== scoreRequest) return;
+    if (!error) {
+      const scores = new Map(data.map(row => [row.impact_id, row.score]));
+      document.querySelectorAll('[data-score-for]').forEach(label => {
+        const score = Number(scores.get(label.dataset.scoreFor));
+        label.hidden = !Number.isFinite(score) || score <= 5;
+        label.textContent = label.hidden ? '' : String(score);
+        label.setAttribute('aria-label', label.hidden ? 'Score hidden' : `Score ${score}`);
+      });
+    }
+    if (updateOrder && document.querySelector('#impacts')) {
+      // Older databases still provide ordering while the aggregate RPC is being deployed.
+      const ranking = error ? await client.rpc('ranked_impacts') : { data, error: null };
+      window.dispatchEvent(new CustomEvent('impact-ranking', { detail: {
+        ids: ranking.error ? null : ranking.data.map(row => row.impact_id),
+        message: 'Couldn’t load Top. Showing newest first.'
+      }}));
+    }
     paintVotes();
   }
   document.addEventListener('click', async event => {
@@ -95,10 +111,11 @@
       const { error } = await client.rpc('set_reaction', { p_impact: id, p_reaction: reaction });
       if (error) throw error;
       reaction ? votes.set(id, reaction) : votes.delete(id);
-      showStatus(reaction ? 'Reaction saved.' : 'Reaction removed.', true);
-      // Keep the current layout stable while voting. Fresh rankings load on revisit.
+      showStatus(reaction ? 'Vote saved.' : 'Vote removed.', true);
+      // Read authoritative totals without moving cards while someone is voting.
+      await refreshRanking(false).catch(() => {});
     } catch {
-      showStatus('Couldn’t save your reaction. Try again.');
+      showStatus('Couldn’t save your vote. Try again.');
     } finally { busy = false; paintVotes(); }
   });
   providers.forEach(button => button.addEventListener('click', async () => {
@@ -159,6 +176,13 @@
       });
       // Voting failures must not disable a working sign-in or contribution form.
       Promise.all([refreshVotes(), refreshRanking()]).catch(() => showStatus('Could not load reactions.'));
+      if (document.querySelector('[data-reaction]')) {
+        const refreshVisibleScores = () => {
+          if (document.visibilityState === 'visible') refreshRanking(false).catch(() => {});
+        };
+        setInterval(refreshVisibleScores, 30000);
+        document.addEventListener('visibilitychange', refreshVisibleScores);
+      }
     } catch {
       state = 'error';
       window.dispatchEvent(new CustomEvent('impact-ranking', { detail: { ids: null } }));

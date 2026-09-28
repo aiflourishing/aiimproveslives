@@ -16,7 +16,7 @@ class SiteTests(unittest.TestCase):
             (self.data / kind).mkdir(parents=True)
         self.source = self.base / 'src'
         self.source.mkdir()
-        for filename in ['styles.css', 'site.js', 'voting.js', 'contribute.js', 'contribute.html', 'contribute-copy.md', 'about.html', 'privacy.html', 'voting-config.json']:
+        for filename in ['styles.css', 'site.js', 'voting.js', 'contribute.js', 'contribute.html', 'contribute-copy.md', 'about.html', 'voting-config.json']:
             (self.source / filename).write_text((SOURCE / filename).read_text())
         shutil.copytree(SOURCE / 'vendor', self.source / 'vendor')
         self.output = self.base / 'dist'
@@ -50,15 +50,16 @@ class SiteTests(unittest.TestCase):
         self.assertNotIn('Impact ·', detail)
         self.assertLess(detail.index('class="description"'), detail.index('detail-reactions'))
 
-    def test_reactions_no_counts_or_projects(self):
+    def test_vote_controls_hide_initial_score_and_preserve_storage_mapping(self):
         self.populate()
         build(self.data, self.output, self.source)
         home = (self.output / 'index.html').read_text()
-        self.assertNotIn('class="count"', home)
+        self.assertIn(f'data-score-for="{self.identifier}" hidden', home)
         self.assertNotIn('project-link', home)
         self.assertIn('title="Like"', home)
         self.assertNotIn('data-reaction="improved"', home)
         self.assertIn('👎', home)
+        self.assertIn('❤️', home)
         self.assertNotIn('<time', home)
         self.assertIn('data-reaction="confused"', home)
         self.assertNotIn('🤔', home)
