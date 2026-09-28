@@ -30,7 +30,7 @@ The Submit page uses the existing Google/GitHub sign-in and a Supabase Edge Func
 
 Edit the About page in `src/about.md`. Use `#` for the title, `##` for section headings, and blank lines between paragraphs. Basic Markdown also supports `**bold**`, `*italic*`, `[link text](https://example.org)`, and flat bullet lists starting with `- `. Layout is handled by the stylesheet; HTML, tables, images, and nested lists are not supported in this file.
 
-Use `[submit it](../contribute/)` to link to Submit, and `[share it](#share)` for the About page's share action: open the device share tray when available, otherwise copy the public About URL.
+Use `[submit it](../contribute/)` to link to Submit, and `[share it](#share)` for the About page's share action: copy the public About URL and show “Link copied”. All Share controls copy links; if clipboard access is unavailable, a selected link field appears for manual copying.
 
 Run `python3 -m scripts.preview` and open http://localhost:8000/about/ to preview edits. Save the Markdown file, then refresh the page. For a one-time build, run `python3 -m scripts.build_site`. Never edit the generated About page in `dist/`.
 

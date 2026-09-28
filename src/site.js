@@ -17,15 +17,6 @@
       shareStatus.textContent = '';
       fallback.hidden = true;
       try {
-        const useShareSheet = shareButton.dataset.shareUrl || window.matchMedia('(pointer: coarse)').matches;
-        if (useShareSheet && typeof navigator.share === 'function') {
-          try {
-            await navigator.share({ title: shareButton.dataset.shareTitle, url: input.value });
-            return;
-          } catch (error) {
-            if (error.name === 'AbortError') return;
-          }
-        }
         await navigator.clipboard.writeText(input.value);
         shareStatus.textContent = 'Link copied';
         shareStatus.hidden = false;
