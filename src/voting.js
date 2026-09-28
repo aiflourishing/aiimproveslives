@@ -30,7 +30,9 @@
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
         if (response.status === 401) { session = null; openSignin(); }
-        throw Error(result.error || 'Couldn’t submit. Your draft is saved. Please try again.');
+        const failure = Error(result.error || 'Couldn’t submit. Your draft is saved. Please try again.');
+        failure.status = response.status;
+        throw failure;
       }
       return result;
     }
