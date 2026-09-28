@@ -28,7 +28,11 @@ Run `npm ci && npm test` for database permission and scoring tests against Postg
 
 The Submit page uses the existing Google/GitHub sign-in and a Supabase Edge Function to create a PR directly for human review. No Issue is created. The endpoint allows the production domains, GitHub Pages, and localhost. See [contribution endpoint setup](supabase/CONTRIBUTIONS.md) for redeployment and configuration. Sign-in is prompted when submitting a contribution or clicking a reaction; the site name links home.
 
-Edit the About post in `src/about.html`: one title and ordinary paragraphs, with layout handled by the stylesheet. Run `python3 -m scripts.build_site` to refresh the preview after editing.
+Edit the About page in `src/about.md`. Use `#` for the title, `##` for section headings, and blank lines between paragraphs. Basic Markdown also supports `**bold**`, `*italic*`, `[link text](https://example.org)`, and flat bullet lists starting with `- `. Layout is handled by the stylesheet; HTML, tables, images, and nested lists are not supported in this file.
+
+Use `[submit it](../contribute/)` to link to Submit, and `[share it](#share)` for the About page's share action: open the device share tray when available, otherwise copy the public About URL.
+
+Run `python3 -m scripts.preview` and open http://localhost:8000/about/ to preview edits. Save the Markdown file, then refresh the page. For a one-time build, run `python3 -m scripts.build_site`. Never edit the generated About page in `dist/`.
 
 ## Editing the contribution page
 
