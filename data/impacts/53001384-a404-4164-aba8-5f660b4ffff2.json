@@ -1,0 +1,14 @@
+{
+  "id": "53001384-a404-4164-aba8-5f660b4ffff2",
+  "title": "BenevolentAI identified an arthritis drug can serve as a COVID treatment",
+  "description": "BenevolentAI helped researchers identify the arthritis drug baricitinib as a treatment for COVID-19. By May 2022, Lilly reported that nearly one million COVID patients across about 15 countries had received it. A trial with 8,156 hospitalized patients found that adding baricitinib to usual care reduced deaths within 28 days from 13.6% to 12.4%. Another trial with 1,525 patients found a larger reduction, from 13.1% to 8.1%.",
+  "occurred_by": "2022/07/30",
+  "sources": [
+    "https://publichealthscotland.scot/repository/baricitinib-in-patients-admitted-to-hospital-with-covid-19-recovery-a-randomised-controlled-open-label-platform-trial-and-updated-meta-analysis/",
+    "https://investor.lilly.com/news-releases/news-release-details/fda-approves-lilly-and-incytes-olumiantr-baricitinib-treatment",
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC8356560/",
+    "https://pubmed.ncbi.nlm.nih.gov/34480861/"
+  ],
+  "submitter_is_contributor": false,
+  "image": "https://ars.els-cdn.com/content/image/1-s2.0-S2589750020301928-gr1.jpg"
+}
