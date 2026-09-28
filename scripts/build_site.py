@@ -118,7 +118,7 @@ def page(title, content, prefix='./', home=False, source=SOURCE, path=''):
     contribute_current = ' aria-current="page"' if title == 'Contribute' else ''
     contribute_script = f"<script defer src=\"{asset('contribute.js')}\"></script>" if title == 'Contribute' else ''
     about_current = ' aria-current="page"' if title == 'About' else ''
-    footer = '' if title == 'About' else f'''<footer><div class="share-control footer-share"><button type="button" class="footer-share-button" data-copy-url="{esc('https://aiimproveslives.com/' + path)}" hidden>Know someone who’d find this inspiring? Share it!</button><span class="share-toast" role="status" hidden></span><label class="share-fallback" hidden>Copy this link<input type="url" readonly aria-label="Page link"></label></div></footer>'''
+    footer = '' if title in ('About', 'Contribute') else f'''<footer><div class="share-control footer-share"><button type="button" class="footer-share-button" data-copy-url="{esc('https://aiimproveslives.com/' + path)}" hidden>Know someone who’d find this inspiring? Share it!</button><span class="share-toast" role="status" hidden></span><label class="share-fallback" hidden>Copy this link<input type="url" readonly aria-label="Page link"></label></div></footer>'''
     return f'''<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{esc(title)} — AI Improves Lives</title><meta name="theme-color" content="#f7f6ef">
