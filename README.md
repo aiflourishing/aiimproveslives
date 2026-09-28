@@ -28,11 +28,11 @@ Run `npm ci && npm test` for database permission and scoring tests against Postg
 
 The Submit page uses the existing Google/GitHub sign-in and a Supabase Edge Function to create a PR directly for human review. No Issue is created. The endpoint allows the production domains, GitHub Pages, and localhost. See [contribution endpoint setup](supabase/CONTRIBUTIONS.md) for redeployment and configuration. Sign-in is prompted when submitting a contribution or clicking a reaction; the site name links home.
 
-Edit the About page in `src/about.md`. Use `#` for the title, `##` for section headings, and blank lines between paragraphs. Basic Markdown also supports `**bold**`, `*italic*`, `[link text](https://example.org)`, and flat bullet lists starting with `- `. Layout is handled by the stylesheet; HTML, tables, images, and nested lists are not supported in this file.
+Edit the landing page introduction in `src/about.md`. Use `#` for the title, `##` for section headings, and blank lines between paragraphs. Basic Markdown also supports `**bold**`, `*italic*`, `[link text](https://example.org)`, and flat bullet lists starting with `- `. Layout is handled by the stylesheet; HTML, tables, images, and nested lists are not supported in this file.
 
-Use `[submit it](../contribute/)` to link to Submit, and `[share it](#share)` for the About page's share action: copy the public About URL and show “Link copied”. All Share controls copy links; if clipboard access is unavailable, a selected link field appears for manual copying.
+Use `[submit it](./contribute/)` to link to Submit, and `[share it](#share)` for the introduction’s share action: copy the public homepage URL and show “Link copied”. All Share controls copy links; if clipboard access is unavailable, a selected link field appears for manual copying.
 
-Run `python3 -m scripts.preview` and open http://localhost:8000/about/ to preview edits. Save the Markdown file, then refresh the page. For a one-time build, run `python3 -m scripts.build_site`. Never edit the generated About page in `dist/`.
+Run `python3 -m scripts.preview` and open http://localhost:8000/ to preview edits. Save the Markdown file, then refresh the page. For a one-time build, run `python3 -m scripts.build_site`. Never edit the generated homepage in `dist/`.
 
 ## Editing the contribution page
 

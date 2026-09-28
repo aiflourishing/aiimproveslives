@@ -18,7 +18,7 @@ def esc(value):
 
 
 def render_about(source):
-    """Render the About page's basic Markdown without build dependencies.
+    """Render the landing introduction's basic Markdown without build dependencies.
 
     Supports headings, paragraphs, flat bullet lists, bold, italic, and links.
     Raw HTML is escaped; links accept only web, email, or local destinations.
@@ -30,7 +30,7 @@ def render_about(source):
                 if url == '#share':
                     return ('<span class="share-control inline-share">'
                             '<button type="button" class="inline-share-button" '
-                            'data-share-url="https://aiimproveslives.com/about/" '
+                            'data-share-url="https://aiimproveslives.com/" '
                             'data-share-title="AI Improves Lives" hidden>' + inline(label) + '</button>'
                             '<span class="share-toast" role="status" hidden></span>'
                             '<label class="share-fallback" hidden>Copy this link'
@@ -38,12 +38,14 @@ def render_about(source):
                 from urllib.parse import urlsplit
                 if urlsplit(url).scheme.lower() not in ('', 'http', 'https', 'mailto'):
                     return esc(match[0])
+                if url == '../contribute/':
+                    url = './contribute/'
                 return f'<a href="{esc(url)}">{inline(label)}</a>'
             if bold is not None:
-                return f'<strong>{esc(bold)}</strong>'
+                return f'<strong>{inline(bold)}</strong>'
             return f'<em>{esc(italic)}</em>'
 
-        pattern = re.compile(r'\[([^\]\n]+)\]\(([^\s()]+)\)|\*\*(.+?)\*\*|\*([^*]+)\*')
+        pattern = re.compile(r'\[([^\]\n]+)\]\(([^\s()]+)\)|\*\*(\*[^*]+\*|.+?)\*\*|\*([^*]+)\*')
         result = []
         start = 0
         for match in pattern.finditer(text):
@@ -82,7 +84,7 @@ def render_about(source):
                 flush()
             paragraph.append(line)
     flush()
-    return '<article class="reading about blog-post">\n' + '\n'.join(blocks) + '\n</article>\n'
+    return '<article class="landing-intro" aria-label="Our purpose">\n' + '\n'.join(blocks) + '\n</article>\n'
 
 
 def contribution_copy(source):
@@ -118,7 +120,6 @@ def page(title, content, prefix='./', home=False, source=SOURCE, path=''):
     impact_current = ' aria-current="page"' if home else ''
     contribute_current = ' aria-current="page"' if title == 'Contribute' else ''
     contribute_script = f"<script defer src=\"{asset('contribute.js')}\"></script>" if title == 'Contribute' else ''
-    about_current = ' aria-current="page"' if title == 'About' else ''
     footer = '' if title in ('About', 'Contribute') else f'''<footer><div class="share-control footer-share"><button type="button" class="footer-share-button" data-copy-url="{esc('https://aiimproveslives.com/' + path)}" hidden>Know someone who’d find this inspiring? Share it!</button><span class="share-toast" role="status" hidden></span><label class="share-fallback" hidden>Copy this link<input type="url" readonly aria-label="Page link"></label></div></footer>'''
     return f'''<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -135,7 +136,7 @@ def page(title, content, prefix='./', home=False, source=SOURCE, path=''):
 <link rel="stylesheet" href="{asset('styles.css')}"><script defer src="{asset('site.js')}"></script><script defer src="{asset('voting.js')}"></script>{contribute_script}</head>
 <body data-base="{prefix}"><a class="skip" href="#main">Skip to content</a>
 <header class="site-header"><a class="brand" href="{prefix}" aria-label="AI Improves Lives"{impact_current}><span class="brand-mark" aria-hidden="true">aı</span></a>
-<nav aria-label="Main"><a href="{prefix}contribute/"{contribute_current}>Submit</a><a href="{prefix}about/"{about_current}>About</a></nav></header>
+<nav aria-label="Main"><a href="{prefix}contribute/"{contribute_current}>Submit</a></nav></header>
 <main id="main" {'class="home"' if home else 'class="detail"'}>{content}</main>
 <dialog id="signin" aria-labelledby="signin-title"><button class="dialog-close" aria-label="Close">×</button><h2 id="signin-title">Sign in</h2><button id="google-signin" class="signin-primary provider-button"><svg class="provider-logo" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="#4285F4" d="M21.6 12.23c0-.71-.06-1.39-.18-2.05H12v3.88h5.38a4.6 4.6 0 0 1-2 3.02v2.51h3.24c1.9-1.75 2.98-4.33 2.98-7.36Z"/><path fill="#34A853" d="M12 22c2.7 0 4.96-.9 6.62-2.41l-3.24-2.51c-.9.6-2.06.96-3.38.96-2.6 0-4.8-1.76-5.59-4.12H3.07v2.59A10 10 0 0 0 12 22Z"/><path fill="#FBBC05" d="M6.41 13.92a6 6 0 0 1 0-3.84V7.49H3.07a10 10 0 0 0 0 9.02l3.34-2.59Z"/><path fill="#EA4335" d="M12 5.96c1.47 0 2.79.51 3.82 1.51l2.87-2.87A9.61 9.61 0 0 0 12 2a10 10 0 0 0-8.93 5.49l3.34 2.59C7.2 7.72 9.4 5.96 12 5.96Z"/></svg><span>Continue with Google</span></button><button id="github-signin" class="signin-primary provider-button"><svg class="provider-logo" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 .297C5.37.297 0 5.67 0 12.297c0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.043-1.61-4.043-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.729.083-.729 1.205.084 1.838 1.237 1.838 1.237 1.07 1.835 2.809 1.305 3.495.998.108-.776.418-1.305.762-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.469-2.38 1.236-3.22-.135-.303-.54-1.524.105-3.176 0 0 1.008-.322 3.301 1.23a11.5 11.5 0 0 1 3.003-.404c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.647 1.652.242 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.804 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg><span>Continue with GitHub</span></button><button id="signout" class="signin-primary" hidden>Sign out</button><p id="auth-status" role="status"></p></dialog><p id="vote-status" class="vote-status" role="status" hidden></p>
 {footer}</body></html>'''
@@ -218,15 +219,15 @@ def build(root=ROOT, output=Path('dist'), source=SOURCE, ranking=None):
         ordered.sort(key=lambda record: ranks[record['id']])
     new_cards = ''.join(card(r, new_order=new_order[r['id']], score=scores.get(r['id'])) for r in ordered)
     initial_data = '' if initial_ranking is None else '<script type="application/json" id="initial-ranking">' + json.dumps(initial_ranking) + '</script>'
-    content = f'''<div class="page-top"><h1>AI Improves Lives</h1></div>
+    content = f'''{render_about(source)}
 <div class="listing-toolbar"><div class="sort-controls" role="group" aria-label="Order impacts"><button type="button" data-sort="top" aria-pressed="true">Top</button><button type="button" data-sort="new" aria-pressed="false">New</button></div><form class="search" role="search"><label class="sr-only" for="search">Search</label><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Search" autocomplete="off"><button type="reset" hidden>Clear</button></form></div>
 <p id="search-status" class="sr-only" role="status" aria-live="polite"></p><p id="ranking-status" class="ranking-status" role="status" hidden></p>
 <section id="impacts" aria-label="Impacts"><div class="card-grid">{new_cards}</div>{initial_data}<p class="empty" {'hidden' if impacts else ''}>No listings yet.</p></section>'''
     (output / 'index.html').write_text(page('Home', content, home=True, source=source), encoding='utf-8')
     about = output / 'about'
     about.mkdir(exist_ok=True)
-    about_content = render_about(source)
-    (about / 'index.html').write_text(page('About', about_content, '../', source=source, path='about/'), encoding='utf-8')
+    # Keep existing shared About links working while the introduction lives at home.
+    (about / 'index.html').write_text('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>AI Improves Lives</title><meta http-equiv="refresh" content="0; url=../"><link rel="canonical" href="https://aiimproveslives.com/"></head><body><p><a href="../">Continue to AI Improves Lives</a></p></body></html>', encoding='utf-8')
     contribute = output / 'contribute'
     contribute.mkdir(exist_ok=True)
     contribute_content = render_contribution(source)

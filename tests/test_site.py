@@ -34,8 +34,8 @@ class SiteTests(unittest.TestCase):
     def test_about_markdown_renders_local_edits(self):
         (self.source / 'about.md').write_text('# Our purpose\n\nA **bold** idea with *emphasis* and [examples](/).\nContinued here.\n\n## Get involved\n\n- Share an example\n- Read [the criteria](https://example.org/criteria?a=1&b=2)\n')
         build(self.data, self.output, self.source)
-        about = (self.output / 'about/index.html').read_text()
-        self.assertIn('<article class="reading about blog-post">', about)
+        about = (self.output / 'index.html').read_text()
+        self.assertIn('<article class="landing-intro" aria-label="Our purpose">', about)
         self.assertIn('<h1>Our purpose</h1>', about)
         self.assertIn('<strong>bold</strong>', about)
         self.assertIn('<em>emphasis</em>', about)
@@ -47,7 +47,7 @@ class SiteTests(unittest.TestCase):
     def test_about_markdown_escapes_html_and_unsafe_links(self):
         (self.source / 'about.md').write_text('# About\n\n<script>alert(1)</script> [bad](javascript:alert) **<img>**\n')
         build(self.data, self.output, self.source)
-        about = (self.output / 'about/index.html').read_text()
+        about = (self.output / 'index.html').read_text()
         self.assertIn('&lt;script&gt;alert(1)&lt;/script&gt;', about)
         self.assertIn('<strong>&lt;img&gt;</strong>', about)
         self.assertNotIn('href="javascript:', about)
@@ -94,14 +94,20 @@ class SiteTests(unittest.TestCase):
     def test_navigation_and_contribute_page(self):
         self.populate()
         build(self.data, self.output, self.source)
-        for path in ['index.html', 'about/index.html', 'contribute/index.html', f'impacts/{self.identifier}/index.html']:
+        for path in ['index.html', 'contribute/index.html', f'impacts/{self.identifier}/index.html']:
             page = (self.output / path).read_text()
             nav = page.split('<nav aria-label="Main">')[1].split('</nav>')[0]
             self.assertIn('>Submit</a>', nav)
-            self.assertIn('>About</a>', nav)
+            self.assertNotIn('>About</a>', nav)
             self.assertNotIn('>Impact</a>', nav)
             self.assertNotIn('Sign in', nav)
             self.assertNotIn('id="account"', page)
+        redirect = (self.output / 'about/index.html').read_text()
+        self.assertIn('content="0; url=../"', redirect)
+        home = (self.output / 'index.html').read_text()
+        self.assertIn('data-copy-url="https://aiimproveslives.com/"', home)
+        self.assertIn('href="./contribute/"', home)
+        self.assertLess(home.index('class="landing-intro"'), home.index('class="listing-toolbar"'))
         contribution = (self.output / 'contribute/index.html').read_text()
         self.assertIn('src="../contribute.js?v=', contribution)
         self.assertIn('name="sources"', contribution)
