@@ -28,7 +28,7 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm test
-      - run: python -m scripts.build_site
+      - run: python -m scripts.build_site --live-ranking
       - uses: actions/upload-artifact@v4
         with:
           name: website

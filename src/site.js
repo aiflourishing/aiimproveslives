@@ -44,11 +44,27 @@
     const form = search.closest('form');
     const clear = form.querySelector('button');
     const grid = document.querySelector('#impacts .card-grid');
-    const cards = [...grid.querySelectorAll('.card')];
+    const cards = [...grid.querySelectorAll('.card')].sort((a, b) => Number(a.dataset.newOrder) - Number(b.dataset.newOrder));
     const buttons = [...document.querySelectorAll('[data-sort]')];
     const params = new URLSearchParams(location.search);
     let order = params.get('sort') === 'new' ? 'new' : 'top';
     let ranking = null;
+    const initial = document.querySelector('#initial-ranking');
+    if (initial) { try { ranking = JSON.parse(initial.textContent); } catch {} }
+    const rankingCacheKey = `impact-ranking:v1:${new URL(document.body.dataset.base, location.href).href}`;
+    try {
+      const cached = JSON.parse(localStorage.getItem(rankingCacheKey));
+      if (cached && Date.now() - cached.savedAt < 86400000 && Array.isArray(cached.rows)) {
+        ranking = cached.rows.map(row => row.impact_id);
+        const scores = new Map(cached.rows.map(row => [row.impact_id, row.score]));
+        document.querySelectorAll('[data-score-for]').forEach(label => {
+          const score = Number(scores.get(label.dataset.scoreFor));
+          label.hidden = !Number.isFinite(score) || score <= 5;
+          label.textContent = label.hidden ? '' : String(score);
+          label.setAttribute('aria-label', label.hidden ? 'Score hidden' : `Score ${score}`);
+        });
+      }
+    } catch {}
     let rankMessage = '';
     search.value = params.get('q') || '';
     function filter(updateURL = true) {
@@ -82,7 +98,10 @@
     }
     buttons.forEach(button => button.addEventListener('click', () => { order = button.dataset.sort; filter(); }));
     window.addEventListener('impact-ranking', event => {
-      ranking = event.detail.ids;
+      if (event.detail.ids !== null) ranking = event.detail.ids;
+      if (event.detail.rows) {
+        try { localStorage.setItem(rankingCacheKey, JSON.stringify({ savedAt: Date.now(), rows: event.detail.rows })); } catch {}
+      }
       rankMessage = event.detail.message || 'Couldn’t load Top. Showing newest first.';
       filter(false);
     });
