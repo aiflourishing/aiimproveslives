@@ -2,3 +2,6 @@
 # The handler verifies the user's bearer token with Supabase Auth before any work.
 # This also supports projects using asymmetric JWT signing keys.
 verify_jwt = false
+
+[functions.review-checklist]
+verify_jwt = false

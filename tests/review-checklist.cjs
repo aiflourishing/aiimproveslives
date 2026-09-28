@@ -1,6 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { requiredQuestions, updateQuestion, missingReview, run } = require('../scripts/review_checklist.cjs');
+let requiredQuestions, updateQuestion, missingReview, run;
+const ready = import('../supabase/functions/_shared/review-checklist.mjs').then(module => ({ requiredQuestions, updateQuestion, missingReview, run } = module));
+const { before } = require('node:test');
+before(() => ready);
 const body = (checked = true, questions = requiredQuestions) => '## Moderator review\n\n' + questions.map(q => `- [${checked ? 'x' : ' '}] ${q}`).join('\n');
 
 test('requires all review boxes, including when the section or individual rows are removed', () => {
@@ -37,9 +40,17 @@ test('posts a failing status to the PR head for unchecked entries and succeeds f
     };
     let failed = false;
     await run({ github, context: { repo: { owner: 'owner', repo: 'repo' }, payload: { pull_request: { number: 1 } } }, core: { setFailed() { failed = true; } } });
-    assert.equal(statuses[0].state, 'pending');
+    assert.equal(statuses.length, 1); // No late pending status can hide a fast webhook result.
     assert.equal(statuses.at(-1).state, scenario.expected);
     assert.equal(statuses.at(-1).sha, 'latest-head');
     assert.equal(failed, scenario.expected === 'failure');
   }
+});
+
+test('rapid edits re-read the current body before publishing a status',async()=>{
+  const statuses=[];
+  let reads=0;
+  const github={rest:{pulls:{get:async()=>({data:{state:'open',head:{sha:'head'},body:++reads===1?body(false):body()}}),listFiles(){}},repos:{createCommitStatus:async s=>statuses.push(s)}},paginate:async()=>[{filename:'data/impacts/id.json',status:'added'}]};
+  await run({github,context:{repo:{owner:'owner',repo:'repo'},payload:{pull_request:{number:1}}},core:{setFailed(){throw Error('stale body must not fail');}}});
+  assert.equal(statuses.length,1);assert.equal(statuses[0].state,'success');assert.ok(reads>=4);
 });
