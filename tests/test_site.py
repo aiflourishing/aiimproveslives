@@ -71,7 +71,7 @@ class SiteTests(unittest.TestCase):
         for path in ['index.html', 'about/index.html', 'contribute/index.html', f'impacts/{self.identifier}/index.html']:
             page = (self.output / path).read_text()
             nav = page.split('<nav aria-label="Main">')[1].split('</nav>')[0]
-            self.assertIn('>Contribute</a>', nav)
+            self.assertIn('>Submit</a>', nav)
             self.assertIn('>About</a>', nav)
             self.assertNotIn('>Impact</a>', nav)
             self.assertNotIn('Sign in', nav)
