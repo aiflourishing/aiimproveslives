@@ -2,7 +2,7 @@
   "name": "aiimproveslives-checks",
   "private": true,
   "scripts": {
-    "test": "node --check src/site.js && node --check src/voting.js && node --check src/contribute.js && node tests/voting-db.cjs && node tests/submissions-db.cjs && node --test tests/submissions.mjs tests/review-checklist.cjs"
+    "test": "node --check src/site.js && node --check src/voting.js && node --check src/contribute.js && node tests/voting-db.cjs && node tests/submissions-db.cjs && node --test tests/submissions.mjs tests/contribute.mjs tests/review-checklist.cjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8"

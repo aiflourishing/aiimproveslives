@@ -7,6 +7,8 @@
   const addSource = document.querySelector('#add-source');
   const sourceInputs = () => [...sourceList.querySelectorAll('input')];
   const fields = document.querySelector('#contribute-fields');
+  const submitButton = form.querySelector('button[type="submit"]');
+  const submitButtonContent = submitButton.innerHTML;
   const result = document.querySelector('#submission-result');
   const success = document.querySelector('#submission-success');
   const reviewPending = document.querySelector('#review-pending');
@@ -15,14 +17,18 @@
   const pr = document.querySelector('#submission-pr');
   const storageKey = `impact-draft:v2:${new URL(document.body.dataset.base, location.href).pathname}`;
   let draft, busy = false, timer, polls = 0;
-  try { draft = JSON.parse(localStorage.getItem(storageKey)); } catch {}
+  // Duplicated tabs copy sessionStorage once, but later draft edits stay in their own tab.
+  try { draft = JSON.parse(sessionStorage.getItem(storageKey) || localStorage.getItem(storageKey)); } catch {}
   if (draft?.receipt?.status === 'submitted') {
     draft = null;
-    try { localStorage.removeItem(storageKey); } catch {}
+    try { sessionStorage.removeItem(storageKey); } catch {}
   }
   if (!draft || typeof draft !== 'object' || !draft.submission_id) draft = { submission_id: crypto.randomUUID() };
   function save() {
-    try { localStorage.setItem(storageKey, JSON.stringify(draft)); } catch {}
+    try {
+      sessionStorage.setItem(storageKey, JSON.stringify(draft));
+      localStorage.removeItem(storageKey); // Migrate drafts saved before tab-local storage.
+    } catch {}
   }
   function readForm() {
     const data = new FormData(form);
@@ -48,7 +54,7 @@
     draft.receipt = receipt; draft.submission_id = receipt.submission_id; save();
     result.hidden = false;
     const accepted = receipt.status === 'submitted';
-    if (accepted) { try { localStorage.removeItem(storageKey); } catch {} }
+    if (accepted) { try { sessionStorage.removeItem(storageKey); } catch {} }
     form.hidden = accepted || receipt.status === 'pending';
     const confirmed = accepted;
     intro.hidden = accepted;
@@ -124,6 +130,7 @@
     if (field?.type === 'checkbox') field.checked = value === 'on';
     else if (field && typeof value === 'string') field.value = name === 'occurred_by' ? value.replaceAll('-', '/') : value;
   }
+  save();
   const imageInput = form.elements.image;
   const imagePreview = document.querySelector('#image-preview');
   const imageStatus = document.querySelector('#image-status');
@@ -178,15 +185,32 @@
     const session = await auth.requireSession(); if (!session || busy) return;
     if (draft.owner && draft.owner !== session.user.id) { draft.submission_id = crypto.randomUUID(); delete draft.receipt; }
     const serialized = JSON.stringify(payload);
-    if (draft.lastPayload && draft.lastPayload !== serialized) { draft.submission_id = crypto.randomUUID(); delete draft.receipt; }
+    // An unsubmitted draft can carry an ID copied from another tab. Reserve a new
+    // one at its first attempt; only retries of the same payload reuse an ID.
+    if (draft.lastPayload !== serialized) { draft.submission_id = crypto.randomUUID(); delete draft.receipt; }
     draft.lastPayload = serialized; draft.owner = session.user.id; save();
-    busy = true; fields.disabled = true; showError(copy['Submitting message']);
+    busy = true; fields.disabled = true; result.hidden = true;
+    submitButton.textContent = copy['Submitting message'];
+    submitButton.setAttribute('aria-busy', 'true');
     const owner = session.user.id;
     try {
-      const receipt = await auth.requestSubmission({ ...payload, submission_id: draft.submission_id });
+      let receipt;
+      try {
+        receipt = await auth.requestSubmission({ ...payload, submission_id: draft.submission_id });
+      } catch (error) {
+        // A definite ID conflict means this payload was not accepted. Recover
+        // drafts from the old shared storage without retrying uncertain failures.
+        if (error.status !== 409) throw error;
+        draft.submission_id = crypto.randomUUID(); delete draft.receipt; save();
+        receipt = await auth.requestSubmission({ ...payload, submission_id: draft.submission_id });
+      }
       if (owner === auth.session?.user.id) { polls = 0; showReceipt(receipt); result.focus(); }
     } catch (error) { showError(error.message); }
-    finally { busy = false; fields.disabled = false; }
+    finally {
+      busy = false; fields.disabled = false;
+      submitButton.innerHTML = submitButtonContent;
+      submitButton.removeAttribute('aria-busy');
+    }
   });
   function resetCompletedForm() {
     if (draft.receipt?.status !== 'submitted') return;
