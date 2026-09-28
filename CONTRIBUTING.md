@@ -48,6 +48,7 @@ For a new repository:
 
 - Enable Issues and Actions, and enable **Allow GitHub Actions to create and approve pull requests** in Actions settings. The workflow only creates PRs; it never approves or merges them.
 - Require human approval and the `validate` check on `main`; dismiss stale approvals when commits change. Assign moderators with permission to review and merge.
+- Require the `Moderator review` status on `main` to enforce the entry checklist. The checklist workflow checks the latest PR description when it is edited and runs only trusted default-branch code. Every required question must be present and checked; updates also require the preservation question. Code-only PRs pass this check automatically. Apply the rule to administrators too if moderators should not bypass it.
 - Intake validates the proposed catalog before creating a PR. On bot-created PRs, select **Approve workflows to run** if GitHub shows that banner, then wait for validation before merging. See [GitHub’s workflow-trigger rules](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow).
 
 The intake workflow runs trusted code from the default branch. Submitted text is parsed as data, never executed, and only record/mapping files are written to proposal branches. There are no LLM calls.
