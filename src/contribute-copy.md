@@ -8,9 +8,7 @@ Your changes appear after saving and refreshing the page.
 Help grow the collection
 
 ## Introduction
-Think we should include an AI system? Add it to the list! 
-
-It should have already improved the lives of many people. 
+Think we should include an AI system that has already improved the lives of many people? Add it to the list!
 
 ## Title label
 Give it a title
