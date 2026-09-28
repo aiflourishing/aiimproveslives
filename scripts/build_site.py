@@ -122,7 +122,16 @@ def page(title, content, prefix='./', home=False, source=SOURCE, path=''):
     footer = '' if title in ('About', 'Contribute') else f'''<footer><div class="share-control footer-share"><button type="button" class="footer-share-button" data-copy-url="{esc('https://aiimproveslives.com/' + path)}" hidden>Know someone who’d find this inspiring? Share it!</button><span class="share-toast" role="status" hidden></span><label class="share-fallback" hidden>Copy this link<input type="url" readonly aria-label="Page link"></label></div></footer>'''
     return f'''<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{esc(browser_title)}</title><meta name="theme-color" content="#f7f6ef">
+<title>{esc(browser_title)}</title>
+<meta property="og:title" content="{esc(browser_title)}">
+<meta property="og:type" content="website">
+<meta property="og:url" content="{esc('https://aiimproveslives.com/' + path)}">
+<meta property="og:image" content="https://aiimproveslives.com/share-preview.png">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="AI Improves Lives dotless aı logo">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{esc(browser_title)}">
+<meta name="twitter:image" content="https://aiimproveslives.com/share-preview.png"><meta name="theme-color" content="#f7f6ef">
 <link rel="stylesheet" href="{asset('styles.css')}"><script defer src="{asset('site.js')}"></script><script defer src="{asset('voting.js')}"></script>{contribute_script}</head>
 <body data-base="{prefix}"><a class="skip" href="#main">Skip to content</a>
 <header class="site-header"><a class="brand" href="{prefix}" aria-label="AI Improves Lives"{impact_current}><span class="brand-mark" aria-hidden="true">aı</span></a>
@@ -193,7 +202,7 @@ def build(root=ROOT, output=Path('dist'), source=SOURCE, ranking=None):
         if (output / directory).exists():
             shutil.rmtree(output / directory)
     build_catalog(root, output / 'catalog.json')
-    for filename in ['styles.css', 'site.js', 'voting.js', 'contribute.js', 'voting-config.json']:
+    for filename in ['styles.css', 'site.js', 'voting.js', 'contribute.js', 'voting-config.json', 'share-preview.png']:
         shutil.copyfile(source / filename, output / filename)
     shutil.copytree(source / 'vendor', output / 'vendor', dirs_exist_ok=True)
     (output / '.nojekyll').touch()

@@ -18,6 +18,7 @@ class SiteTests(unittest.TestCase):
         self.source.mkdir()
         for filename in ['styles.css', 'site.js', 'voting.js', 'contribute.js', 'contribute.html', 'contribute-copy.md', 'about.md', 'voting-config.json']:
             (self.source / filename).write_text((SOURCE / filename).read_text())
+        shutil.copyfile(SOURCE / 'share-preview.png', self.source / 'share-preview.png')
         shutil.copytree(SOURCE / 'vendor', self.source / 'vendor')
         self.output = self.base / 'dist'
         self.identifier = '12345678-1234-1234-1234-123456789abc'
