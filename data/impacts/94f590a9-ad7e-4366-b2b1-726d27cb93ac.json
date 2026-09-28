@@ -1,0 +1,12 @@
+{
+  "id": "94f590a9-ad7e-4366-b2b1-726d27cb93ac",
+  "title": "Google Flood Hub helps predict and prepare for floods",
+  "description": "Google Flood Hub uses AI to forecast river floods up to seven days ahead for free across 150+ countries. This gives communities and emergency teams more time to prepare. In March 2026, Google added urban flash flood forecasts that provide up to 24 hours of advance warning.",
+  "occurred_by": "2026/03/12",
+  "sources": [
+    "https://cities.google/flood-hub",
+    "https://research.google/blog/protecting-cities-with-ai-driven-flash-flood-forecasting/"
+  ],
+  "submitter_is_contributor": false,
+  "image": "https://storage.googleapis.com/gweb-uniblog-publish-prod/images/_Google_Flood_Hub_-_Hero_image.width-1300.png"
+}
