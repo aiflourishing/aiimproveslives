@@ -15,7 +15,6 @@ function harness(options = {}) {
     if (url.endsWith('/auth/v1/user')) return Response.json({id:user,email_confirmed_at:'today',is_anonymous:false,...options.user}, {status:options.authStatus || 200});
     if (url.endsWith('/reserve_submission')) {
       const body = JSON.parse(init.body); assert.equal(body.p_user,user);
-      if (options.rateLimit) return Response.json({message:'Submission limit reached'}, {status:400});
       if (receipt) return Response.json({...receipt,fresh:false});
       receipt = {id,user_id:user,status:'pending',fresh:true}; return Response.json(receipt);
     }
@@ -81,8 +80,7 @@ test('uncertain GitHub timeout never causes another creation attempt',async()=>{
   assert.equal((await (await h.handler(request())).json()).status,'pending');
   assert.equal(h.calls.filter(c=>c.url.endsWith('/pulls') && c.init.method==='POST').length,1);
 });
-test('returns useful rate-limit errors and marks definite GitHub rejections failed',async()=>{
-  const h=harness({rateLimit:true});assert.equal((await h.handler(request())).status,429);
+test('marks definite GitHub rejections failed',async()=>{
   const rejected=harness({githubStatus:403});assert.equal((await rejected.handler(request())).status,502);
   assert.ok(rejected.calls.some(c=>c.url.endsWith('/finish_pr_submission') && JSON.parse(c.init.body).p_pr===null));
 });

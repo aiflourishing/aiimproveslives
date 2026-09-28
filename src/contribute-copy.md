@@ -23,7 +23,7 @@ What improved?
 What does the AI system do, who benefited, and how? Include quantitative evidence when available. What you write here will be the description shown on the page.
 
 ## Sources label
-Supporting sources
+Sources
 
 ## Source placeholder
 https://…
@@ -38,7 +38,6 @@ Impact occurred by
 Did you help make it happen?
 
 ## Contributor default answer
-Choose Yes or No
 
 ## Contributor yes answer
 Yes, I contributed
@@ -50,7 +49,7 @@ No, I’m sharing it
 Image link
 
 ## Image example
-https://example.org/photo.jpg
+https://
 
 ## Submit button
 Submit

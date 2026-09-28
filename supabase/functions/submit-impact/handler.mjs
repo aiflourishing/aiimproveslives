@@ -47,7 +47,6 @@ export function createHandler(env, fetcher = fetch) {
     });
     if (!response.ok) {
       const detail = await response.json().catch(() => ({}));
-      if (detail.message === 'Submission limit reached') throw new RequestError('Please wait a minute between submissions. You can submit up to 10 impacts per day.', 429);
       if (detail.message === 'Submission identifier already used') throw new RequestError('This submission has already been sent. Start a new contribution to change it.', 409);
       throw new Error('Receipt storage unavailable');
     }
