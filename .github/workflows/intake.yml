@@ -1,7 +1,5 @@
-name: Issue intake
+name: Legacy entry updates
 on:
-  issues:
-    types: [opened, edited]
   issue_comment:
     types: [created, edited]
 permissions:
@@ -15,7 +13,7 @@ jobs:
   intake:
     if: >-
       !github.event.issue.pull_request && github.event.sender.type != 'Bot' &&
-      (github.event_name == 'issues' || startsWith(github.event.comment.body, '/update'))
+      startsWith(github.event.comment.body, '/update')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

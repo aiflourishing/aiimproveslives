@@ -8,7 +8,7 @@ See [goals.md](goals.md) for the purpose and [todos.md](todos.md) for next steps
 
 Impacts live in `data/impacts/` as one JSON file per record. Validate with `python3 scripts/catalog.py validate`; run tests with `python3 -m unittest discover -s tests`. GitHub Actions runs both on PRs. Website styles and browser interactions live in `src/`.
 
-Issue submissions and `/update` JSON comments generate linked PRs through ordinary code. Merged records build into a static website artifact; the production publishing workflow validates the site before deployment. The submission endpoint and Issue intake are active.
+Website submissions create PRs directly through ordinary code. Legacy `/update` comments remain supported on existing submission Issues. Merged records build into a static website artifact; the production publishing workflow validates the site before deployment. The submission endpoint is active.
 
 ## Website
 
@@ -26,7 +26,7 @@ Run `npm ci && npm test` for database permission and scoring tests against Postg
 
 ## Website contributions
 
-The Contribute page uses the existing Google/GitHub sign-in and a Supabase Edge Function to create an Impact Issue, which the intake workflow turns into a PR for human review. The endpoint allows the production domains, GitHub Pages, and localhost. See [contribution endpoint setup](supabase/CONTRIBUTIONS.md) for redeployment and configuration. Sign-in is prompted when submitting a contribution or clicking a reaction; the site name links home.
+The Submit page uses the existing Google/GitHub sign-in and a Supabase Edge Function to create a PR directly for human review. No Issue is created. The endpoint allows the production domains, GitHub Pages, and localhost. See [contribution endpoint setup](supabase/CONTRIBUTIONS.md) for redeployment and configuration. Sign-in is prompted when submitting a contribution or clicking a reaction; the site name links home.
 
 Edit the About post in `src/about.html`: one title and ordinary paragraphs, with layout handled by the stylesheet. Run `python3 -m scripts.build_site` to refresh the preview after editing.
 

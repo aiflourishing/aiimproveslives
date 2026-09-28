@@ -1,6 +1,6 @@
 # Submit an Impact
 
-Read the [acceptance criteria](entry-criteria.md), then use the website’s Contribute form. Alternatively, open an [Impact Issue](https://github.com/aiflourishing/aiimproveslives/issues/new/choose) and fill in the JSON and contributor-status answer. Code validates the submission and opens a linked PR for human review. Edit invalid submissions to retry. Keep the Issue open after acceptance for updates.
+Read the [acceptance criteria](entry-criteria.md), then use the website’s **Submit** form. The server validates your submission and creates a PR directly for moderator review. No Issue is needed. You can also propose a record by creating a branch and opening a PR on GitHub.
 
 An Impact describes an AI system and its realized benefit. Name the system and those responsible in the title or description where relevant.
 
@@ -13,34 +13,20 @@ An Impact describes an AI system and its realized benefit. Name the system and t
 | `description` | Objectively describe what the AI system does, how many people benefited, and what improved in their lives. Support claims with sources; say when numbers are unknown. |
 | `occurred_by` | Date by which impact occurred, in `YYYY/MM/DD` format |
 | `sources` | Nonempty list of supporting HTTP(S) URLs |
-| `submitter_is_contributor` | `true` or `false`, populated from the Issue form's contributor-status answer |
+| `submitter_is_contributor` | `true` or `false`, populated from the submission form's contributor-status answer |
 | `image` | Optional direct HTTPS image URL |
 
 Required text must be nonempty. Contributor status records the submitter’s answer. Image links must point directly to an HTTPS image; the website previews them before submission. Server validation checks URL structure, not ongoing availability.
 
 ## Updates
 
-When realized impact changes significantly, post `/update` followed by the **complete updated record** in a JSON code block on its original Issue. Corrections are welcome anytime; no fixed schedule applies.
+When realized impact changes significantly, propose a PR updating its existing file in `data/impacts/`. Corrections are welcome anytime. Preserve its ID and unrelated details, include supporting sources, and check the additional preservation review box. Update PRs do not create another entry or duplicate GitHub votes.
 
-````text
-/update
-```json
-{
-  "id": "12345678-1234-1234-1234-123456789abc",
-  "title": "AI system's realized benefit",
-  "description": "Updated, source-supported account of who benefited and how.",
-  "occurred_by": "2026/09/13",
-  "sources": ["https://example.org/evidence"],
-  "submitter_is_contributor": false
-}
-```
-````
+Moderators can edit the JSON on a pending PR through Files changed → ⋯ → Edit file. The committed record determines the published listing; changing the PR description does not change that record.
 
-Copy the current record from `data/impacts/` and preserve its ID and unrelated details. Omitted optional fields are removed. Include supporting sources and use a direct HTTPS URL for any image.
+For older entries that have a submission Issue, `/update` followed by the complete record in a fenced JSON block still works on that original Issue, including after it is closed. New submissions use PRs directly.
 
-Automation opens a new linked PR; moderators review its changes before merging. Ordinary comments are ignored. Anyone can propose an update, but an Issue can update only its own Impact. One PR per Issue can be pending: merge or close it before submitting another proposal. Moderators can edit the impact JSON directly on the pending PR branch through Files changed → ⋯ → Edit file. Keep its ID unchanged. The committed record determines the published listing; changing the PR description does not change that record. To replace a pending proposal through Issue intake, close its PR and edit the submission with corrected JSON.
-
-Expand an existing Impact when reach or results change; open a new Issue for a distinct benefit.
+Expand an existing entry when its reach or results change; submit a new entry for a distinct benefit.
 
 ## Repository setup
 
@@ -49,9 +35,9 @@ For a new repository:
 - Enable Issues and Actions, and enable **Allow GitHub Actions to create and approve pull requests** in Actions settings. The workflow only creates PRs; it never approves or merges them.
 - Require human approval and the `validate` check on `main`; dismiss stale approvals when commits change. Assign moderators with permission to review and merge.
 - Require the `Moderator review` status on `main` to enforce the entry checklist. The checklist workflow checks the latest PR description when it is edited and runs only trusted default-branch code. Every required question must be present and checked; updates also require the preservation question. Code-only PRs pass this check automatically. Apply the rule to administrators too if moderators should not bypass it.
-- Intake validates the proposed catalog before creating a PR. On bot-created PRs, select **Approve workflows to run** if GitHub shows that banner, then wait for validation before merging. See [GitHub’s workflow-trigger rules](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow).
+- The submission endpoint validates fields before creating a PR. Wait for catalog validation before merging. See [GitHub’s workflow-trigger rules](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow).
 
-The intake workflow runs trusted code from the default branch. Submitted text is parsed as data, never executed, and only record/mapping files are written to proposal branches. There are no LLM calls.
+The submission endpoint writes only the validated entry JSON to its proposal branch. Submitted text is data, never executed. The checklist is loaded from trusted main code. There are no LLM calls. A signed GitHub webhook updates the Moderator review status directly; the Actions check remains a fallback.
 
 After merge, the catalog workflow validates records and uploads `catalog.json` as an Actions artifact. The GitHub-backed local preview reads merged records automatically. Public website publishing is a separate setup described in README.md.
 

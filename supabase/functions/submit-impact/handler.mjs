@@ -35,20 +35,11 @@ export function validateSubmission(input) {
   }
   return record;
 }
-export function issueBody(record, id) {
-  // Escape backticks inside JSON strings so submitted text cannot introduce another fence.
-  const json = JSON.stringify(record, null, 2).replaceAll('`', '\\u0060');
-  const escape = value => value.replace(/[&<>]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[char])).replaceAll('`', '&#96;');
-  const url = value => value.replace(/[<>\s]/g, char => encodeURIComponent(char));
-  const image = record.image ? `![Submitted impact image](<${url(record.image)}>)\n\n` : '';
-  return `## ${escape(record.title)}\n\n${escape(record.description)}\n\n${image}### Impact occurred by\n\n${record.occurred_by}\n\n### Sources\n\n${record.sources.map(link => `- <${url(link)}>`).join('\n')}\n\n### Are you one of the contributor(s)?\n\n${record.submitter_is_contributor ? 'Yes' : 'No'}\n\n<details>\n<summary>Submission data</summary>\n\n### Impact JSON\n\n\`\`\`json\n${json}\n\`\`\`\n\n</details>\n\n<!-- website-submission:${id} -->`;
-
-}
 export function createHandler(env, fetcher = fetch) {
   const origins = (env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
   const repo = env.GITHUB_REPOSITORY || 'aiflourishing/aiimproveslives';
   const githubBase = `https://api.github.com/repos/${repo}`;
-  const githubHeaders = { Authorization: `Bearer ${env.GITHUB_ISSUES_TOKEN}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json', 'X-GitHub-Api-Version': '2022-11-28' };
+  const githubHeaders = { Authorization: `Bearer ${(env.GITHUB_SUBMISSIONS_TOKEN || env.GITHUB_ISSUES_TOKEN)}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json', 'X-GitHub-Api-Version': '2022-11-28' };
   async function rpc(name, body) {
     const response = await fetcher(`${env.SUPABASE_URL}/rest/v1/rpc/${name}`, {
       method: 'POST', headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`, 'Content-Type': 'application/json' },
@@ -64,7 +55,61 @@ export function createHandler(env, fetcher = fetch) {
   }
   function receiptResult(receipt) {
     return { submission_id: receipt.id, status: receipt.status,
+      pr_url: receipt.pr_number ? `https://github.com/${repo}/pull/${receipt.pr_number}` : null,
       issue_url: receipt.issue_number ? `https://github.com/${repo}/issues/${receipt.issue_number}` : null };
+  }
+  async function github(path, method = 'GET', body, allow404 = false) {
+    const response = await fetcher(`${githubBase}/${path}`, { method, headers: githubHeaders,
+      body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(15000) });
+    if (allow404 && response.status === 404) return null;
+    if (!response.ok) {
+      const error = new Error('GitHub request failed');
+      error.definite = response.status >= 400 && response.status < 500;
+      throw error;
+    }
+    return response.json();
+  }
+  const branchFor = receipt => `codex/submission-${receipt.id}`;
+  async function findPR(receipt) {
+    const owner = repo.split('/')[0];
+    const rows = await github(`pulls?state=all&head=${encodeURIComponent(owner + ':' + branchFor(receipt))}&per_page=100`);
+    return rows.find(pr => pr.head?.ref === branchFor(receipt) && pr.head?.repo?.full_name === repo);
+  }
+  async function finishPR(receipt, user, pr) {
+    if (!Number.isSafeInteger(pr.number) || pr.number < 1) throw new Error('Invalid PR response');
+    await rpc('finish_pr_submission', { p_user: user.id, p_id: receipt.id, p_pr: pr.number });
+    return receiptResult({ ...receipt, status: 'submitted', pr_number: pr.number });
+  }
+  async function createPR(receipt, record) {
+    const branch = branchFor(receipt);
+    const base = await github('git/ref/heads/main');
+    const existing = await github(`git/ref/heads/${branch}`, 'GET', undefined, true);
+    const content = JSON.stringify({ id: receipt.id, ...record }, null, 2) + '\n';
+    const decode = encoded => new TextDecoder().decode(Uint8Array.from(atob(encoded.replace(/\s/g, '')), char => char.charCodeAt(0)));
+    if (existing) {
+      const file = await github(`contents/data/impacts/${receipt.id}.json?ref=${existing.object.sha}`);
+      if (decode(file.content) !== content) throw new Error('Existing submission branch differs');
+    } else {
+      const accepted = await github(`contents/data/impacts/${receipt.id}.json?ref=${base.object.sha}`, 'GET', undefined, true);
+      if (accepted) throw Object.assign(new Error('Entry identifier already exists'), { definite: true });
+      const commit = await github(`git/commits/${base.object.sha}`);
+      const tree = await github('git/trees', 'POST', { base_tree: commit.tree.sha,
+        tree: [{ path: `data/impacts/${receipt.id}.json`, mode: '100644', type: 'blob', content }] });
+      const proposed = await github('git/commits', 'POST', { message: `Add entry ${receipt.id}`, tree: tree.sha, parents: [base.object.sha] });
+      await github('git/refs', 'POST', { ref: `refs/heads/${branch}`, sha: proposed.sha });
+    }
+    // Fetch review questions only from the trusted main commit.
+    const template = await github(`contents/.github/pull_request_template.md?ref=${base.object.sha}`);
+    const checklist = decode(template.content);
+    // HTML escaping keeps contributor text from introducing checklist headings or rows.
+    const escape = value => value.replace(/[&<>]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[char])).replaceAll('`', '&#96;');
+    const url = value => value.replace(/[<>\s()]/g, char => encodeURIComponent(char));
+    const preview = `<h2>${escape(record.title)}</h2>\n\n<p>${escape(record.description).replaceAll('\n', '<br>')}</p>\n\n` +
+      `### Entry occurred by\n\n${record.occurred_by}\n\n### Supporting sources\n\n${record.sources.map(link => `- <${url(link)}>`).join('\n')}\n\n` +
+      `### Did the submitter contribute?\n\n${record.submitter_is_contributor ? 'Yes' : 'No'}\n\n` +
+      (record.image ? `### Image preview\n\n![Submitted entry image](<${url(record.image)}>)\n\n` : '');
+    return github('pulls', 'POST', { title: record.title, head: branch, base: 'main',
+      body: `Submitted through the website.\n\n${checklist}\n\n${preview}<!-- website-submission:${receipt.id} -->` });
   }
   return async request => {
     const origin = request.headers.get('Origin');
@@ -76,7 +121,7 @@ export function createHandler(env, fetcher = fetch) {
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
     if (!['GET','POST'].includes(request.method)) return reply({ error: 'Method not allowed.' }, 405);
     try {
-      if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY || !env.GITHUB_ISSUES_TOKEN || !origins.length) throw new Error('Missing configuration');
+      if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY || !(env.GITHUB_SUBMISSIONS_TOKEN || env.GITHUB_ISSUES_TOKEN) || !origins.length) throw new Error('Missing configuration');
       const authorization = request.headers.get('Authorization') || '';
       if (!/^Bearer \S+$/.test(authorization)) throw new RequestError('Please sign in to contribute.', 401);
       const auth = await fetcher(`${env.SUPABASE_URL}/auth/v1/user`, {
@@ -91,6 +136,10 @@ export function createHandler(env, fetcher = fetch) {
         const receipt = await rpc('submission_receipt', { p_user: user.id, p_id: id });
         if (!receipt) throw new RequestError('Submission not found.', 404);
         const result = receiptResult(receipt);
+        if (receipt.status === 'pending' && !receipt.issue_number && !receipt.pr_number) {
+          const existing = await findPR(receipt);
+          if (existing) return reply(await finishPR(receipt, user, existing));
+        }
         if (receipt.issue_number) {
           // Only trusted automation comments can supply the PR link or review status.
           const response = await fetcher(`${githubBase}/issues/${receipt.issue_number}/comments?per_page=100`, { headers: githubHeaders, signal: AbortSignal.timeout(15000) });
@@ -126,26 +175,28 @@ export function createHandler(env, fetcher = fetch) {
       const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(record)));
       const hash = [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
       const receipt = await rpc('reserve_submission', { p_user: user.id, p_id: input.submission_id, p_hash: hash });
-      if (!receipt.fresh) return reply(receiptResult(receipt));
-      let response;
-      try {
-        response = await fetcher(`${githubBase}/issues`, { method: 'POST', headers: githubHeaders,
-          body: JSON.stringify({ title: `[Impact] ${record.title}`, body: issueBody(record, receipt.id) }), signal: AbortSignal.timeout(15000) });
-      } catch {
-        // The request might have reached GitHub. Never blindly repeat a content-creating call.
-        return reply(receiptResult(receipt), 202);
+      if (receipt.pr_number || receipt.issue_number) return reply(receiptResult(receipt));
+      let existing;
+      try { existing = await findPR(receipt); }
+      catch (error) {
+        // This read precedes every content write, so a failed fresh request is safe to retry.
+        if (receipt.fresh) await rpc('finish_pr_submission', { p_user: user.id, p_id: receipt.id, p_pr: null });
+        throw error;
       }
-      if (!response.ok) {
-        if (response.status >= 400 && response.status < 500) {
-          await rpc('finish_submission', { p_user: user.id, p_id: receipt.id, p_issue: null });
+      if (existing) return reply(await finishPR(receipt, user, existing));
+      // Only the reservation owner creates content; concurrent repeats merely poll.
+      if (!receipt.fresh) return reply(receiptResult(receipt), 202);
+      let pr;
+      try { pr = await createPR(receipt, record); }
+      catch (error) {
+        if (error.definite) {
+          await rpc('finish_pr_submission', { p_user: user.id, p_id: receipt.id, p_pr: null });
           throw new RequestError('GitHub could not accept the submission. Please try again in a minute.', 502);
         }
+        // A PR might exist despite a timeout. GET safely recovers its link without creating another.
         return reply(receiptResult(receipt), 202);
       }
-      const issue = await response.json();
-      if (!Number.isSafeInteger(issue.number) || issue.number < 1) return reply(receiptResult(receipt), 202);
-      await rpc('finish_submission', { p_user: user.id, p_id: receipt.id, p_issue: issue.number });
-      return reply(receiptResult({ ...receipt, status: 'submitted', issue_number: issue.number }), 201);
+      return reply(await finishPR(receipt, user, pr), 201);
     } catch (error) {
       return reply({ error: error instanceof RequestError ? error.message : 'Submissions are temporarily unavailable. Your form has been kept; please try again.' }, error instanceof RequestError ? error.status : 503);
     }
