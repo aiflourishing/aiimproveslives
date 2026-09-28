@@ -111,6 +111,7 @@ def render_contribution(source):
 
 
 def page(title, content, prefix='./', home=False, source=SOURCE, path=''):
+    browser_title = 'Has AI Improved Lives' if home else f'{title} — AI Improves Lives'
     def asset(name):
         digest = hashlib.sha256((source / name).read_bytes()).hexdigest()[:10]
         return f'{prefix}{name}?v={digest}'
@@ -121,7 +122,7 @@ def page(title, content, prefix='./', home=False, source=SOURCE, path=''):
     footer = '' if title in ('About', 'Contribute') else f'''<footer><div class="share-control footer-share"><button type="button" class="footer-share-button" data-copy-url="{esc('https://aiimproveslives.com/' + path)}" hidden>Know someone who’d find this inspiring? Share it!</button><span class="share-toast" role="status" hidden></span><label class="share-fallback" hidden>Copy this link<input type="url" readonly aria-label="Page link"></label></div></footer>'''
     return f'''<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{esc(title)} — AI Improves Lives</title><meta name="theme-color" content="#f7f6ef">
+<title>{esc(browser_title)}</title><meta name="theme-color" content="#f7f6ef">
 <link rel="stylesheet" href="{asset('styles.css')}"><script defer src="{asset('site.js')}"></script><script defer src="{asset('voting.js')}"></script>{contribute_script}</head>
 <body data-base="{prefix}"><a class="skip" href="#main">Skip to content</a>
 <header class="site-header"><a class="brand" href="{prefix}" aria-label="AI Improves Lives"{impact_current}><span class="brand-mark" aria-hidden="true">aı</span></a>
