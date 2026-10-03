@@ -31,34 +31,13 @@ class SiteTests(unittest.TestCase):
         build(self.data, self.output, self.source)
         self.assertIn('No listings yet.', (self.output / 'index.html').read_text())
 
-    def test_about_markdown_renders_local_edits(self):
-        (self.source / 'about.md').write_text('# Our purpose\n\nA **bold** idea with *emphasis* and [examples](/).\nContinued here.\n\n## Get involved\n\n- Share an example\n- Read [the criteria](https://example.org/criteria?a=1&b=2)\n')
-        build(self.data, self.output, self.source)
-        about = (self.output / 'index.html').read_text()
-        self.assertIn('<article class="landing-intro" aria-label="Our purpose">', about)
-        self.assertIn('<h1>Our purpose</h1>', about)
-        self.assertIn('<strong>bold</strong>', about)
-        self.assertIn('<em>emphasis</em>', about)
-        self.assertIn('<a href="/">examples</a>. Continued here.</p>', about)
-        self.assertIn('<h2>Get involved</h2>', about)
-        self.assertIn('<ul><li>Share an example</li>', about)
-        self.assertIn('href="https://example.org/criteria?a=1&amp;b=2"', about)
-
-    def test_about_markdown_escapes_html_and_unsafe_links(self):
-        (self.source / 'about.md').write_text('# About\n\n<script>alert(1)</script> [bad](javascript:alert) **<img>**\n')
-        build(self.data, self.output, self.source)
-        about = (self.output / 'index.html').read_text()
-        self.assertIn('&lt;script&gt;alert(1)&lt;/script&gt;', about)
-        self.assertIn('<strong>&lt;img&gt;</strong>', about)
-        self.assertNotIn('href="javascript:', about)
-
-    def test_real_pages_links_excerpt_and_escaping(self):
+    def test_real_pages_links_and_escaping(self):
         self.populate()
         build(self.data, self.output, self.source)
         home = (self.output / 'index.html').read_text()
         detail = (self.output / f'impacts/{self.identifier}/index.html').read_text()
-        self.assertIn('A' * 140 + '...', home)
-        self.assertNotIn('A' * 141, home)
+        self.assertNotIn('<p>' + 'A' * 140, home)
+        self.assertIn('a' * 141, home)  # Full description remains searchable.
         self.assertIn('A' * 141, detail)
         self.assertNotIn('<script>alert', home)
         self.assertIn('&lt;script&gt;', home)
@@ -107,7 +86,7 @@ class SiteTests(unittest.TestCase):
         home = (self.output / 'index.html').read_text()
         self.assertIn('data-copy-url="https://aiimproveslives.com/"', home)
         self.assertIn('href="./contribute/"', home)
-        self.assertLess(home.index('class="landing-intro"'), home.index('class="listing-toolbar"'))
+        self.assertNotIn('class="landing-intro"', home)
         contribution = (self.output / 'contribute/index.html').read_text()
         self.assertIn('src="../contribute.js?v=', contribution)
         self.assertIn('name="sources"', contribution)

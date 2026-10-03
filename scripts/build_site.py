@@ -4,7 +4,6 @@ import json
 import re
 import hashlib
 import shutil
-import subprocess
 from pathlib import Path
 
 from scripts.catalog import ROOT, load_catalog
@@ -15,76 +14,6 @@ SOURCE = Path(__file__).resolve().parents[1] / 'src'
 
 def esc(value):
     return html.escape(str(value), quote=True)
-
-
-def render_about(source):
-    """Render the landing introduction's basic Markdown without build dependencies.
-
-    Supports headings, paragraphs, flat bullet lists, bold, italic, and links.
-    Raw HTML is escaped; links accept only web, email, or local destinations.
-    """
-    def inline(text):
-        def token(match):
-            label, url, bold, italic = match.groups()
-            if label is not None:
-                if url == '#share':
-                    return ('<span class="share-control inline-share">'
-                            '<button type="button" class="inline-share-button" '
-                            'data-share-url="https://aiimproveslives.com/" '
-                            'data-share-title="AI Improves Lives" hidden>' + inline(label) + '</button>'
-                            '<span class="share-toast" role="status" hidden></span>'
-                            '<label class="share-fallback" hidden>Copy this link'
-                            '<input type="url" readonly aria-label="Page link"></label></span>')
-                from urllib.parse import urlsplit
-                if urlsplit(url).scheme.lower() not in ('', 'http', 'https', 'mailto'):
-                    return esc(match[0])
-                if url == '../contribute/':
-                    url = './contribute/'
-                return f'<a href="{esc(url)}">{inline(label)}</a>'
-            if bold is not None:
-                return f'<strong>{inline(bold)}</strong>'
-            return f'<em>{esc(italic)}</em>'
-
-        pattern = re.compile(r'\[([^\]\n]+)\]\(([^\s()]+)\)|\*\*(\*[^*]+\*|.+?)\*\*|\*([^*]+)\*')
-        result = []
-        start = 0
-        for match in pattern.finditer(text):
-            result.extend((esc(text[start:match.start()]), token(match)))
-            start = match.end()
-        result.append(esc(text[start:]))
-        return ''.join(result)
-
-    blocks = []
-    paragraph = []
-    bullets = []
-
-    def flush():
-        if paragraph:
-            blocks.append('<p>' + inline(' '.join(paragraph)) + '</p>')
-            paragraph.clear()
-        if bullets:
-            blocks.append('<ul>' + ''.join('<li>' + inline(item) + '</li>' for item in bullets) + '</ul>')
-            bullets.clear()
-
-    for line in (source / 'about.md').read_text(encoding='utf-8').splitlines():
-        line = line.strip()
-        heading = re.fullmatch(r'(#{1,6})\s+(.+)', line)
-        bullet = re.fullmatch(r'[-*]\s+(.+)', line)
-        if not line or heading:
-            flush()
-            if heading:
-                level = len(heading[1])
-                blocks.append(f'<h{level}>' + inline(heading[2]) + f'</h{level}>')
-        elif bullet:
-            if paragraph:
-                flush()
-            bullets.append(bullet[1])
-        else:
-            if bullets:
-                flush()
-            paragraph.append(line)
-    flush()
-    return '<article class="landing-intro" aria-label="Our purpose">\n' + '\n'.join(blocks) + '\n</article>\n'
 
 
 def contribution_copy(source):
@@ -168,11 +97,10 @@ def share_control(record):
 
 def card(record, prefix='./', new_order=0, score=None):
     description = record['description']
-    excerpt = description[:140] + ('...' if len(description) > 140 else '')
     search = ' '.join([record['title'], description])
     return f'''<article class="card" data-impact="{record['id']}" data-search="{esc(search.lower())}" data-new-order="{new_order}">
 {photo(record)}<div class="card-body"><div class="card-title"><h3><a class="impact-link" href="{prefix}impacts/{record['id']}/">{esc(record['title'])}</a></h3></div>
-<p>{esc(excerpt)}</p><div class="card-actions">{reactions(record["id"], score)}{share_control(record)}</div></div></article>'''
+<div class="card-actions">{reactions(record["id"], score)}{share_control(record)}</div></div></article>'''
 
 
 def links(record):
@@ -184,15 +112,6 @@ def links(record):
             result += f'<li><a href="{esc(url)}">{esc(urlsplit(url).netloc)} <span aria-hidden="true">↗</span></a></li>'
         result += '</ol></section>'
     return result
-
-
-def added_at(root, record):
-    """New means accepted on main, using the first-parent commit that introduced the record."""
-    try:
-        result = subprocess.run(['git', 'log', '--first-parent', '--diff-filter=A', '--format=%cI', '--', str((root / 'impacts' / (record['id'] + '.json')).resolve())], cwd=root, capture_output=True, text=True, check=True)
-        return result.stdout.strip().splitlines()[-1] if result.stdout.strip() else record['occurred_by'].replace('/', '-')
-    except (OSError, subprocess.CalledProcessError):
-        return record['occurred_by'].replace('/', '-')
 
 
 def build(root=ROOT, output=Path('dist'), source=SOURCE, ranking=None):
@@ -207,7 +126,7 @@ def build(root=ROOT, output=Path('dist'), source=SOURCE, ranking=None):
         shutil.copyfile(source / filename, output / filename)
     shutil.copytree(source / 'vendor', output / 'vendor', dirs_exist_ok=True)
     (output / '.nojekyll').touch()
-    ordered = sorted(impacts.values(), key=lambda r: (added_at(root, r), r['id']), reverse=True)
+    ordered = sorted(impacts.values(), key=lambda r: (r['occurred_by'], r['id']), reverse=True)
     new_order = {record['id']: index for index, record in enumerate(ordered)}
     scores = {row['impact_id']: row.get('score') for row in (ranking or []) if row.get('impact_id') in impacts}
     initial_ranking = None
@@ -219,14 +138,14 @@ def build(root=ROOT, output=Path('dist'), source=SOURCE, ranking=None):
         ordered.sort(key=lambda record: ranks[record['id']])
     new_cards = ''.join(card(r, new_order=new_order[r['id']], score=scores.get(r['id'])) for r in ordered)
     initial_data = '' if initial_ranking is None else '<script type="application/json" id="initial-ranking">' + json.dumps(initial_ranking) + '</script>'
-    content = f'''{render_about(source)}
+    content = f'''<h1 class="home-title">Has AI Improved Lives?</h1>
 <div class="listing-toolbar"><div class="sort-controls" role="group" aria-label="Order impacts"><button type="button" data-sort="top" aria-pressed="true">Top</button><button type="button" data-sort="new" aria-pressed="false">New</button></div><form class="search" role="search"><label class="sr-only" for="search">Search</label><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Search" autocomplete="off"><button type="reset" hidden>Clear</button></form></div>
 <p id="search-status" class="sr-only" role="status" aria-live="polite"></p><p id="ranking-status" class="ranking-status" role="status" hidden></p>
 <section id="impacts" aria-label="Impacts"><div class="card-grid">{new_cards}</div>{initial_data}<p class="empty" {'hidden' if impacts else ''}>No listings yet.</p></section>'''
     (output / 'index.html').write_text(page('Home', content, home=True, source=source), encoding='utf-8')
     about = output / 'about'
     about.mkdir(exist_ok=True)
-    # Keep existing shared About links working while the introduction lives at home.
+    # Keep existing shared About links pointing to the collection.
     (about / 'index.html').write_text('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>AI Improves Lives</title><meta http-equiv="refresh" content="0; url=../"><link rel="canonical" href="https://aiimproveslives.com/"></head><body><p><a href="../">Continue to AI Improves Lives</a></p></body></html>', encoding='utf-8')
     contribute = output / 'contribute'
     contribute.mkdir(exist_ok=True)
