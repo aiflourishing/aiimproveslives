@@ -42,7 +42,7 @@ class ApprovalPreviewTests(unittest.TestCase):
             build(mirror.data, output)
             home = (output / 'index.html').read_text()
             self.assertIn('First accepted', home)
-            detail = (output / 'impacts' / identifiers[0] / 'index.html').read_text()
+            detail = (output / 'first-accepted' / 'index.html').read_text()
             self.assertIn('https://example.org/one', detail)
             self.assertIn('https://example.org/two', detail)
             # A newly accepted record with an older impact date belongs after newer impacts.
