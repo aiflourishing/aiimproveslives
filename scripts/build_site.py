@@ -4,6 +4,7 @@ import json
 import re
 import hashlib
 import shutil
+import unicodedata
 from pathlib import Path
 
 from scripts.catalog import ROOT, load_catalog
@@ -14,6 +15,32 @@ SOURCE = Path(__file__).resolve().parents[1] / 'src'
 
 def esc(value):
     return html.escape(str(value), quote=True)
+
+
+def impact_paths(impacts, preferred=None):
+    paths = {}
+    used = {'about', 'contribute', 'impacts', 'projects', 'privacy', 'vendor'}
+    preferred = preferred or {}
+    for identifier in sorted(impacts):
+        if identifier in preferred:
+            slug = preferred[identifier]
+            if not isinstance(slug, str) or not re.fullmatch(r'[a-z0-9]+(?:-[a-z0-9]+)*', slug) or slug in used:
+                raise ValueError(f'Invalid or duplicate product URL for {identifier}: {slug}')
+            paths[identifier] = slug + '/'
+            used.add(slug)
+    for identifier, record in sorted(impacts.items()):
+        if identifier in paths:
+            continue
+        title = unicodedata.normalize('NFKD', record['title']).encode('ascii', 'ignore').decode()
+        slug = re.sub(r'[^a-z0-9]+', '-', title.lower().replace("'", '')).strip('-') or 'entry'
+        candidate = slug
+        suffix = 2
+        while candidate in used:
+            candidate = f'{slug}-{suffix}'
+            suffix += 1
+        used.add(candidate)
+        paths[identifier] = candidate + '/'
+    return paths
 
 
 def contribution_copy(source):
@@ -55,6 +82,7 @@ def page(title, content, prefix='./', home=False, source=SOURCE, path=''):
 <title>{esc(browser_title)}</title>
 <meta property="og:title" content="{esc(browser_title)}">
 <meta property="og:type" content="website">
+<link rel="canonical" href="{esc('https://aiimproveslives.com/' + path)}">
 <meta property="og:url" content="{esc('https://aiimproveslives.com/' + path)}">
 <meta property="og:image" content="https://aiimproveslives.com/share-preview.png">
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
@@ -79,29 +107,24 @@ def photo(record, detail=False):
     return f'<img class="{"detail-image" if detail else "card-image"}" src="{esc(record["image"])}" alt="" {loading} decoding="async">'
 
 
-def date(record):
-    from datetime import datetime
-    return datetime.strptime(record['occurred_by'], '%Y/%m/%d').strftime('%B %d, %Y').replace(' 0', ' ')
-
-
 def reactions(identifier, score=None):
     visible_score = str(score) if isinstance(score, int) and not isinstance(score, bool) and score > 5 else ''
     score_attributes = f' aria-label="Score {visible_score}"' if visible_score else ' hidden'
     return f'''<div class="reactions" role="group" aria-label="Rate this listing" data-impact="{identifier}"><button type="button" data-reaction="heart" aria-label="Like" title="Like" aria-pressed="false">❤️</button><span class="vote-score" data-score-for="{identifier}"{score_attributes}>{visible_score}</span></div>'''
 
 
-def share_control(record):
-    url = f'https://aiimproveslives.com/impacts/{record["id"]}/'
+def share_control(record, path):
+    url = f'https://aiimproveslives.com/{path}'
     return f'''<div class="share-control"><button type="button" class="share-button" data-share-url="{esc(url)}" data-share-title="{esc(record['title'])}" aria-label="Share this entry" hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V3m-4 4 4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg><span>Share</span></button><span class="share-toast" role="status" hidden></span><label class="share-fallback" hidden>Copy this link<input type="url" readonly aria-label="Entry link"></label></div>'''
 
 
 
-def card(record, prefix='./', new_order=0, score=None):
+def card(record, path, prefix='./', new_order=0, score=None):
     description = record['description']
     search = ' '.join([record['title'], description])
     return f'''<article class="card" data-impact="{record['id']}" data-search="{esc(search.lower())}" data-new-order="{new_order}">
-{photo(record)}<div class="card-body"><div class="card-title"><h3><a class="impact-link" href="{prefix}impacts/{record['id']}/">{esc(record['title'])}</a></h3></div>
-<div class="card-actions">{reactions(record["id"], score)}{share_control(record)}</div></div></article>'''
+{photo(record)}<div class="card-body"><div class="card-title"><h3><a class="impact-link" href="{prefix}{path}">{esc(record['title'])}</a></h3></div>
+<div class="card-actions">{reactions(record["id"], score)}{share_control(record, path)}</div></div></article>'''
 
 
 def links(record):
@@ -119,6 +142,17 @@ def build(root=ROOT, output=Path('dist'), source=SOURCE, ranking=None):
     catalog = load_catalog(root)
     impacts = catalog['impacts']
     output.mkdir(parents=True, exist_ok=True)
+    slug_file = source / 'impact-slugs.json'
+    preferred = json.loads(slug_file.read_text()) if slug_file.exists() else {}
+    paths = impact_paths(impacts, preferred)
+    manifest = output / '.impact-paths.json'
+    if manifest.exists():
+        for old in json.loads(manifest.read_text()):
+            if re.fullmatch(r'[a-z0-9]+(?:-[a-z0-9]+)*', old) and old not in {'about', 'contribute', 'impacts', 'projects', 'privacy', 'vendor'}:
+                target = output / old
+                if target.is_dir():
+                    shutil.rmtree(target)
+    manifest.write_text(json.dumps([path.rstrip('/') for path in paths.values()]))
     for directory in ['impacts', 'projects', 'privacy']:
         if (output / directory).exists():
             shutil.rmtree(output / directory)
@@ -137,7 +171,7 @@ def build(root=ROOT, output=Path('dist'), source=SOURCE, ranking=None):
         initial_ranking = ids + [record['id'] for record in ordered if record['id'] not in ids]
         ranks = {identifier: index for index, identifier in enumerate(initial_ranking)}
         ordered.sort(key=lambda record: ranks[record['id']])
-    new_cards = ''.join(card(r, new_order=new_order[r['id']], score=scores.get(r['id'])) for r in ordered)
+    new_cards = ''.join(card(r, paths[r['id']], new_order=new_order[r['id']], score=scores.get(r['id'])) for r in ordered)
     initial_data = '' if initial_ranking is None else '<script type="application/json" id="initial-ranking">' + json.dumps(initial_ranking) + '</script>'
     content = f'''<h1 class="home-title">Has AI Improved Lives?</h1>
 <div class="listing-toolbar"><div class="sort-controls" role="group" aria-label="Order impacts"><button type="button" data-sort="top" aria-pressed="true">Top</button><button type="button" data-sort="new" aria-pressed="false">New</button></div><form class="search" role="search"><label class="sr-only" for="search">Search</label><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Search" autocomplete="off"><button type="reset" hidden>Clear</button></form></div>
@@ -153,10 +187,11 @@ def build(root=ROOT, output=Path('dist'), source=SOURCE, ranking=None):
     contribute_content = render_contribution(source)
     (contribute / 'index.html').write_text(page('Contribute', contribute_content, '../', source=source, path='contribute/'), encoding='utf-8')
     for record in impacts.values():
-        content = f'''<article class="reading listing-detail"><a class="back" href="../../#impacts"><span aria-hidden="true">←</span><span>All</span></a><header class="listing-heading"><h1>{esc(record['title'])}</h1>{photo(record, True)}</header><p class="description">{esc(record['description'])}</p><div class="detail-reactions">{reactions(record["id"], scores.get(record["id"]))}{share_control(record)}</div>{links(record)}<p class="reported-date">Reported as of <time datetime="{record['occurred_by'].replace('/', '-')}">{date(record)}</time></p></article>'''
-        target = output / 'impacts' / record['id']
+        path = paths[record['id']]
+        content = f'''<article class="reading listing-detail"><a class="back" href="../#impacts"><span aria-hidden="true">←</span><span>All</span></a><header class="listing-heading"><h1>{esc(record['title'])}</h1>{photo(record, True)}</header><p class="description">{esc(record['description'])}</p><div class="detail-reactions">{reactions(record["id"], scores.get(record["id"]))}{share_control(record, path)}</div>{links(record)}</article>'''
+        target = output / path
         target.mkdir(parents=True)
-        (target / 'index.html').write_text(page(record['title'], content, '../../', source=source, path=f'impacts/{record["id"]}/'), encoding='utf-8')
+        (target / 'index.html').write_text(page(record['title'], content, '../', source=source, path=path), encoding='utf-8')
     return output
 
 

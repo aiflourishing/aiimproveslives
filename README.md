@@ -14,9 +14,9 @@ Website submissions create PRs directly through ordinary code. Legacy `/update` 
 
 Build with `python3 -m scripts.build_site`, then preview with `python3 -m http.server 8000 --directory dist` at http://localhost:8000. The generated `dist/` folder is ready for GitHub Pages, including repository subpaths; browsing needs no application server; reactions use Supabase. The Supabase browser SDK is vendored and version-pinned. The build workflow uploads the `website` artifact and deploys GitHub Pages after Python, JavaScript, and database checks pass.
 
-Top sorts all matching impacts by accumulated website likes + positive GitHub reaction scores. The website offers only a heart; no website or GitHub reaction subtracts points. There is no year filter. Equal scores put later submissions first. New is ordered by the first Git commit adding each Impact (with the recorded impact date as fallback for uncommitted files); full Git history is fetched in the build workflow. Cards omit dates. Detail pages show `occurred_by` at the bottom as “Reported as of”.
+Top sorts all matching impacts by accumulated website likes + positive GitHub reaction scores. The website offers only a heart; no website or GitHub reaction subtracts points. There is no year filter. Equal scores put later submissions first. New is ordered by the recorded impact date (`occurred_by`), most recent first. Dates are used for sorting and are not displayed on cards or detail pages.
 
-Search matches impact titles and full descriptions in the browser. Cards show the first 140 description characters plus `...` when longer. Every impact has a generated page that works on direct visits and reloads. Records without images receive a quiet decorative placeholder on cards; detail pages omit the image. Empty collections do not include invented content.
+Search matches impact titles and full descriptions in the browser. Cards show images and full titles; descriptions appear on the individual impact pages. Every impact has a short product URL directly under the domain, such as `/fair/` or `/chatgpt/`. Product URLs are assigned in `src/impact-slugs.json` by record ID and stay stable when titles change. Add a product slug there for new entries; unassigned entries fall back to dash-separated titles. Direct visits and reloads work. Records without images receive a quiet decorative placeholder on cards; detail pages omit the image. Empty collections do not include invented content.
 
 ## Community voting
 
@@ -28,11 +28,11 @@ Run `npm ci && npm test` for database permission and scoring tests against Postg
 
 The Submit page uses the existing Google/GitHub sign-in and a Supabase Edge Function to create a PR directly for human review. No Issue is created. The endpoint allows the production domains, GitHub Pages, and localhost. See [contribution endpoint setup](supabase/CONTRIBUTIONS.md) for redeployment and configuration. Sign-in is prompted when submitting a contribution or clicking a reaction; the site name links home.
 
-Edit the landing page introduction in `src/about.md`. Use `#` for the title, `##` for section headings, and blank lines between paragraphs. Basic Markdown also supports `**bold**`, `*italic*`, `[link text](https://example.org)`, and flat bullet lists starting with `- `. Layout is handled by the stylesheet; HTML, tables, images, and nested lists are not supported in this file.
+The landing page opens directly with the collection. The former introduction is saved in `src/about.md` for a separate release post and is not included in the website.
 
-Use `[submit it](./contribute/)` to link to Submit, and `[share it](#share)` for the introduction’s share action: copy the public homepage URL and show “Link copied”. All Share controls copy links; if clipboard access is unavailable, a selected link field appears for manual copying.
+All Share controls copy links; if clipboard access is unavailable, a selected link field appears for manual copying.
 
-Run `python3 -m scripts.preview` and open http://localhost:8000/ to preview edits. Save the Markdown file, then refresh the page. For a one-time build, run `python3 -m scripts.build_site`. Never edit the generated homepage in `dist/`.
+Run `python3 -m scripts.preview` and open http://localhost:8000/ to preview edits. For a one-time build, run `python3 -m scripts.build_site`. Never edit the generated homepage in `dist/`.
 
 ## Editing the contribution page
 
@@ -44,7 +44,7 @@ The GitHub mode polls every 60 seconds in a disposable mirror. It never pulls in
 
 ## Publishing approved impacts
 
-Acceptance means **merging** the reviewed PR into `main`; an approval review by itself does not publish. The build reads the merged `data/impacts/*.json` records, produces cards in New and individual detail pages, and orders New by the first commit introducing each record on main's first-parent history. Later corrections do not bump an old entry to the top. Source links remain an array in Issue JSON, the committed record, and the generated catalog, and appear as individual links on detail pages.
+Acceptance means **merging** the reviewed PR into `main`; an approval review by itself does not publish. The build reads the merged `data/impacts/*.json` records, produces cards in New and individual detail pages, and orders New by the recorded impact date, most recent first. Source links remain an array in Issue JSON, the committed record, and the generated catalog, and appear as individual links on detail pages.
 
 Every push to `main`, including merged impact PRs, validates, builds, and deploys the site. GitHub Pages uses **GitHub Actions**, with **PAGES_ENABLED=true**. The public fallback address is https://aiflourishing.github.io/aiimproveslives/. The primary domain is `aiimproveslives.com`; `lasteval.com` redirects to it over HTTPS. Both domains require valid certificates; GitHub Pages must have HTTPS enforcement enabled.
 

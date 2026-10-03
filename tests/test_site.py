@@ -35,19 +35,19 @@ class SiteTests(unittest.TestCase):
         self.populate()
         build(self.data, self.output, self.source)
         home = (self.output / 'index.html').read_text()
-        detail = (self.output / f'impacts/{self.identifier}/index.html').read_text()
+        detail = (self.output / 'script-alert-1-script/index.html').read_text()
         self.assertNotIn('<p>' + 'A' * 140, home)
         self.assertIn('a' * 141, home)  # Full description remains searchable.
         self.assertIn('A' * 141, detail)
         self.assertNotIn('<script>alert', home)
         self.assertIn('&lt;script&gt;', home)
-        self.assertIn(f'./impacts/{self.identifier}/', home)
+        self.assertIn('./script-alert-1-script/', home)
         self.assertNotIn('projects/', detail)
         self.assertFalse((self.output / 'projects').exists())
         self.assertNotIn('id="year"', home)
         self.assertNotIn('All years', home)
         self.assertLess(detail.index('<h1>'), detail.index('detail-image'))
-        self.assertIn('Reported as of', detail)
+        self.assertNotIn('Reported as of', detail)
         self.assertNotIn('Impact ·', detail)
         self.assertLess(detail.index('class="description"'), detail.index('detail-reactions'))
 
@@ -63,7 +63,7 @@ class SiteTests(unittest.TestCase):
         self.assertIn('❤️', home)
         self.assertNotIn('<time', home)
         self.assertNotIn('data-reaction="confused"', home)
-        detail = (self.output / f'impacts/{self.identifier}/index.html').read_text()
+        detail = (self.output / 'script-alert-1-script/index.html').read_text()
         self.assertNotIn('👎', detail)
         self.assertNotIn('data-reaction="confused"', detail)
         self.assertIn('data-reaction="heart"', detail)
@@ -73,7 +73,7 @@ class SiteTests(unittest.TestCase):
     def test_navigation_and_contribute_page(self):
         self.populate()
         build(self.data, self.output, self.source)
-        for path in ['index.html', 'contribute/index.html', f'impacts/{self.identifier}/index.html']:
+        for path in ['index.html', 'contribute/index.html', 'script-alert-1-script/index.html']:
             page = (self.output / path).read_text()
             nav = page.split('<nav aria-label="Main">')[1].split('</nav>')[0]
             self.assertIn('>Submit</a>', nav)
@@ -101,6 +101,7 @@ class SiteTests(unittest.TestCase):
         (self.data / f'impacts/{self.identifier}.json').unlink()
         build(self.data, self.output, self.source)
         self.assertFalse((self.output / f'impacts/{self.identifier}').exists())
+        self.assertFalse((self.output / 'script-alert-1-script').exists())
 
     def test_top_is_baked_into_html_without_losing_new_order(self):
         self.populate()
@@ -114,3 +115,44 @@ class SiteTests(unittest.TestCase):
         self.assertIn(f'data-score-for="{self.identifier}" aria-label="Score 8">8</span>', home)
         initial = home.split('id="initial-ranking">')[1].split('</script>')[0]
         self.assertEqual(json.loads(initial), [self.identifier, second])
+
+    def test_readable_urls_and_share_links(self):
+        self.impact['title'] = "OpenStreetMap's fAIr helps disaster response"
+        self.populate()
+        build(self.data, self.output, self.source)
+        path = 'openstreetmaps-fair-helps-disaster-response/'
+        detail = (self.output / path / 'index.html').read_text()
+        home = (self.output / 'index.html').read_text()
+        self.assertIn(f'href="./{path}"', home)
+        self.assertIn(f'data-share-url="https://aiimproveslives.com/{path}"', detail)
+        self.assertIn(f'data-copy-url="https://aiimproveslives.com/{path}"', detail)
+        self.assertIn(f'<link rel="canonical" href="https://aiimproveslives.com/{path}">', detail)
+        self.assertIn('href="../#impacts"', detail)
+        self.assertIn('src="../voting.js?v=', detail)
+        self.assertFalse((self.output / 'impacts').exists())
+
+    def test_title_url_collisions_and_reserved_paths(self):
+        from scripts.build_site import impact_paths
+        records = {str(i): {'title': title} for i, title in enumerate(['Contribute', 'Contribute', 'Café & Care', 'Cafe Care', '!!!'])}
+        paths = impact_paths(records)
+        self.assertEqual(len(set(paths.values())), 5)
+        self.assertNotIn('contribute/', paths.values())
+        self.assertEqual(paths['2'], 'cafe-care/')
+        self.assertEqual(paths['3'], 'cafe-care-2/')
+        self.assertEqual(paths['4'], 'entry/')
+
+    def test_product_urls_override_titles_and_remain_stable(self):
+        self.populate()
+        (self.source / 'impact-slugs.json').write_text(json.dumps({self.identifier: 'fair'}))
+        build(self.data, self.output, self.source)
+        home = (self.output / 'index.html').read_text()
+        self.assertIn('href="./fair/"', home)
+        self.assertTrue((self.output / 'fair/index.html').exists())
+        self.impact['title'] = 'An updated title'
+        self.populate()
+        build(self.data, self.output, self.source)
+        self.assertTrue((self.output / 'fair/index.html').exists())
+        self.assertFalse((self.output / 'an-updated-title').exists())
+        from scripts.build_site import impact_paths
+        with self.assertRaises(ValueError):
+            impact_paths({self.identifier: self.impact}, {self.identifier: 'contribute'})
