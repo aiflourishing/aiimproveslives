@@ -9,7 +9,7 @@ from scripts.build_site import build
 
 
 class ApprovalPreviewTests(unittest.TestCase):
-    def test_only_merged_records_appear_and_newest_added_is_first(self):
+    def test_only_merged_records_appear_and_latest_impact_date_is_first(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             upstream = root / 'upstream'
@@ -45,14 +45,14 @@ class ApprovalPreviewTests(unittest.TestCase):
             detail = (output / 'impacts' / identifiers[0] / 'index.html').read_text()
             self.assertIn('https://example.org/one', detail)
             self.assertIn('https://example.org/two', detail)
-            # A newly accepted record with an older impact date still belongs first.
+            # A newly accepted record with an older impact date belongs after newer impacts.
             add(identifiers[1], 'Second accepted', '2020/01/01')
             git('commit', '--amend', '--no-edit', '--date=2027-01-01T00:00:00Z')
-            # Committer time, not impact date or author date, determines recency.
+            # A later commit date must not override the recorded impact date.
             subprocess.run(['git','-C',str(upstream),'commit','--amend','--no-edit'], env={**__import__('os').environ,'GIT_COMMITTER_DATE':'2027-01-01T00:00:00Z'}, check=True, capture_output=True)
             mirror.refresh(); build(mirror.data, output)
             home = (output / 'index.html').read_text()
-            self.assertLess(home.index('Second accepted'), home.index('First accepted'))
+            self.assertLess(home.index('First accepted'), home.index('Second accepted'))
             git('rm', 'data/impacts/'+identifiers[0]+'.json'); git('commit', '-m', 'Remove impact')
             mirror.refresh(); build(mirror.data, output)
             self.assertFalse((output / 'impacts' / identifiers[0]).exists())
