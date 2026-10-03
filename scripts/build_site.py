@@ -62,6 +62,7 @@ def page(title, content, prefix='./', home=False, source=SOURCE, path=''):
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{esc(browser_title)}">
 <meta name="twitter:image" content="https://aiimproveslives.com/share-preview.png"><meta name="theme-color" content="#f7f6ef">
+<link rel="icon" type="image/svg+xml" href="{asset('favicon.svg')}">
 <link rel="stylesheet" href="{asset('styles.css')}"><script defer src="{asset('site.js')}"></script><script defer src="{asset('voting.js')}"></script>{contribute_script}</head>
 <body data-base="{prefix}"><a class="skip" href="#main">Skip to content</a>
 <header class="site-header"><a class="brand" href="{prefix}" aria-label="AI Improves Lives"{impact_current}><span class="brand-mark" aria-hidden="true">aı</span></a>
@@ -122,7 +123,7 @@ def build(root=ROOT, output=Path('dist'), source=SOURCE, ranking=None):
         if (output / directory).exists():
             shutil.rmtree(output / directory)
     build_catalog(root, output / 'catalog.json')
-    for filename in ['styles.css', 'site.js', 'voting.js', 'contribute.js', 'voting-config.json', 'share-preview.png']:
+    for filename in ['styles.css', 'site.js', 'voting.js', 'contribute.js', 'voting-config.json', 'share-preview.png', 'favicon.svg']:
         shutil.copyfile(source / filename, output / filename)
     shutil.copytree(source / 'vendor', output / 'vendor', dirs_exist_ok=True)
     (output / '.nojekyll').touch()
