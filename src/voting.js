@@ -88,7 +88,8 @@
   async function refreshRanking(updateOrder = true) {
     if (!document.querySelector('[data-reaction]')) return;
     const request = ++scoreRequest;
-    const { data, error } = await publicRanking('impact_scores');
+    let { data, error } = await publicRanking('impact_ranking');
+    if (error) ({ data, error } = await publicRanking('impact_scores'));
     if (request !== scoreRequest) return;
     if (!error) {
       const scores = new Map(data.map(row => [row.impact_id, row.score]));

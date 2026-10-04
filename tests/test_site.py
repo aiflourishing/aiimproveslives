@@ -166,3 +166,17 @@ class SiteTests(unittest.TestCase):
         self.assertLess(home.index(f'data-impact="{second}"'), home.index(f'data-impact="{self.identifier}"'))
         initial = home.split('id="initial-ranking">')[1].split('</script>')[0]
         self.assertEqual(json.loads(initial), [second, self.identifier])
+
+    def test_hidden_scores_use_rank_groups_or_preserve_server_order(self):
+        self.populate()
+        second = '12345678-1234-1234-1234-123456789abd'
+        (self.data / f'impacts/{second}.json').write_text(json.dumps({**self.impact, 'id': second, 'occurred_by': '2026/01/03'}))
+        for ranking, expected in [
+            ([{'impact_id': self.identifier, 'score': None, 'vote_rank': 1}, {'impact_id': second, 'score': None, 'vote_rank': 2}], [self.identifier, second]),
+            ([{'impact_id': self.identifier, 'score': None, 'vote_rank': 1}, {'impact_id': second, 'score': None, 'vote_rank': 1}], [second, self.identifier]),
+            ([{'impact_id': self.identifier, 'score': None}, {'impact_id': second, 'score': None}], [self.identifier, second]),
+        ]:
+            build(self.data, self.output, self.source, ranking=ranking)
+            home = (self.output / 'index.html').read_text()
+            initial = home.split('id="initial-ranking">')[1].split('</script>')[0]
+            self.assertEqual(json.loads(initial), expected)
