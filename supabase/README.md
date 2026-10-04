@@ -49,3 +49,5 @@ Apply `005_sync_safe_updates.sql` after migration 004. It makes catalog sync com
 Apply `006_public_vote_scores.sql` to expose the thresholded aggregate scores used by the reaction controls. It preserves all existing votes, scoring weights, ranking tie-breaks, and authentication requirements.
 
 Apply `007_positive_only_votes.sql` after migration 006 to reject new website dislikes and make all historical website dislikes and GitHub `-1`/`confused` reactions neutral in both ranking and public scores. It preserves existing reactions, likes, the score display threshold, and ranking tie-breaks. No reaction subtracts points. The current project has this update applied.
+
+Apply `011_ranking_tie_groups.sql` to expose vote rank groups through `impact_ranking()` without exposing totals of five or fewer. Top uses these groups for vote priority and orders equal totals by the recorded impact date. Older `impact_scores()` responses preserve server order as a fallback. This adds a read-only function and does not change stored votes.

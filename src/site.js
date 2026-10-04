@@ -41,9 +41,13 @@
     let order = params.get('sort') === 'new' ? 'new' : 'top';
     let ranking = null;
     function rankedIds(rows) {
-      const scores = new Map(rows.map(row => [row.impact_id, Number(row.score) || 0]));
+      const grouped = rows.every(row => Number.isFinite(row.vote_rank));
+      // Older responses hide small totals: preserve their server order instead of treating null as zero.
+      if (!grouped && rows.some(row => row.score === null)) return rows.map(row => row.impact_id);
+      const scores = new Map(rows.map(row => [row.impact_id, grouped ? -row.vote_rank : Number(row.score) || 0]));
       // Cards already follow newest impact date; stable sorting preserves that for ties.
-      return [...cards].sort((a, b) => (scores.get(b.dataset.impact) || 0) - (scores.get(a.dataset.impact) || 0)).map(card => card.dataset.impact);
+      const fallback = grouped ? -Infinity : 0;
+      return [...cards].sort((a, b) => (scores.get(b.dataset.impact) ?? fallback) - (scores.get(a.dataset.impact) ?? fallback)).map(card => card.dataset.impact);
     }
     const initial = document.querySelector('#initial-ranking');
     if (initial) { try { ranking = JSON.parse(initial.textContent); } catch {} }

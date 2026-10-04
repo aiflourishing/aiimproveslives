@@ -167,7 +167,14 @@ def build(root=ROOT, output=Path('dist'), source=SOURCE, ranking=None):
     initial_ranking = None
     if ranking is not None:
         # Stable sorting keeps the newest impact date first when scores are equal.
-        ordered.sort(key=lambda record: scores.get(record['id']) or 0, reverse=True)
+        groups = {row['impact_id']: row.get('vote_rank') for row in ranking}
+        if ranking and all(isinstance(row.get('vote_rank'), int) for row in ranking):
+            ordered.sort(key=lambda record: groups.get(record['id'], float('inf')))
+        elif any(row.get('score') is None for row in ranking):
+            ranks = {row['impact_id']: index for index, row in enumerate(ranking)}
+            ordered.sort(key=lambda record: ranks.get(record['id'], float('inf')))
+        else:
+            ordered.sort(key=lambda record: scores.get(record['id']) or 0, reverse=True)
         initial_ranking = [record['id'] for record in ordered]
     new_cards = ''.join(card(r, paths[r['id']], new_order=new_order[r['id']], score=scores.get(r['id'])) for r in ordered)
     initial_data = '' if initial_ranking is None else '<script type="application/json" id="initial-ranking">' + json.dumps(initial_ranking) + '</script>'
@@ -203,7 +210,7 @@ if __name__ == '__main__':
     if args.live_ranking:
         try:
             config = json.loads((SOURCE / 'voting-config.json').read_text())
-            request = Request(config['url'].rstrip('/') + '/rest/v1/rpc/impact_scores', data=b'{}', method='POST',
+            request = Request(config['url'].rstrip('/') + '/rest/v1/rpc/impact_ranking', data=b'{}', method='POST',
                               headers={'apikey': config['publishableKey'], 'Content-Type': 'application/json'})
             with urlopen(request, timeout=10) as response:
                 ranking = json.load(response)

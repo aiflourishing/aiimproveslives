@@ -16,7 +16,7 @@ test('public Top rankings load while the sign-in SDK is still waiting',async()=>
   };
   vm.runInNewContext(readFileSync('src/voting.js','utf8'),{document,window,location:{href:'https://example.org/'},URL,fetch,Response,AbortSignal,CustomEvent,setInterval(){},setTimeout(){},clearTimeout(){}});
   await new Promise(resolve=>setImmediate(resolve));
-  assert.ok(requests.includes('https://project.supabase.co/rest/v1/rpc/impact_scores'));
+  assert.ok(requests.includes('https://project.supabase.co/rest/v1/rpc/impact_ranking'));
   assert.ok(requests.includes('https://example.org/vendor/supabase.js'));
   assert.equal(events.length,1);
   assert.equal(events[0].type,'impact-ranking');
@@ -46,8 +46,12 @@ test('Top ties use newest impact dates for cached and refreshed scores', () => {
   assert.deepEqual(displayed, ['new', 'middle', 'old']);
   listeners['impact-ranking']({ detail: { ids: ['old', 'new', 'middle'], rows: [{ impact_id: 'old', score: 9 }, { impact_id: 'new', score: 4 }, { impact_id: 'middle', score: 4 }] } });
   assert.deepEqual(displayed, ['old', 'new', 'middle']);
+  listeners['impact-ranking']({ detail: { ids: ['old', 'middle', 'new'], rows: [{ impact_id: 'old', score: null, vote_rank: 1 }, { impact_id: 'middle', score: null, vote_rank: 2 }, { impact_id: 'new', score: null, vote_rank: 2 }] } });
+  assert.deepEqual(displayed, ['old', 'new', 'middle']);
+  listeners['impact-ranking']({ detail: { ids: ['middle', 'old', 'new'], rows: [{ impact_id: 'middle', score: null }, { impact_id: 'old', score: null }, { impact_id: 'new', score: null }] } });
+  assert.deepEqual(displayed, ['middle', 'old', 'new']);
   sorts[1].click();
   assert.deepEqual(displayed, ['new', 'middle', 'old']);
   sorts[0].click();
-  assert.deepEqual(displayed, ['old', 'new', 'middle']);
+  assert.deepEqual(displayed, ['middle', 'old', 'new']);
 });
