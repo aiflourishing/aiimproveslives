@@ -1,9 +1,9 @@
 :root {
-  --paper: #f7f6ef;
-  --ink: #243e34;
-  --muted: #657269;
-  --line: #daddd0;
-  --accent: #ede5c8;
+  --paper: #ffffff;
+  --ink: #283342;
+  --muted: #6b7380;
+  --line: #e2e6ed;
+  --accent: #e9edfa;
   --serif: Georgia, "Times New Roman", serif;
   color-scheme: light;
   font-family: Arial, Helvetica, sans-serif;
@@ -707,4 +707,52 @@ dialog p { font-size: 16px; line-height: 1.6; margin: 18px 0; }
 .listing-detail .description { margin: 28px 0 20px; }
 @media (max-width: 480px) {
   .listing-heading h1 { font-size: 30px; }
+}
+
+/* Periwinkle palette with fluid desktop spacing and a single-column phone layout. */
+.site-design { position: relative; isolation: isolate; background: #fff; }
+.site-design:has(.home) { --page-gutter: clamp(20px, 4vw, 160px); --header-height: clamp(76px, 6.25vw, 140px); --heading-height: clamp(190px, 17vw, 340px); background-image: linear-gradient(180deg, #edf0fc 0, #edf0fc var(--header-height), #f4f5fd 52%, #ffffff 100%); background-size: 100% calc(var(--header-height) + var(--heading-height) + 130px); background-repeat: no-repeat; }
+.site-design:has(.home) > .site-header,
+.site-design > main.home,
+.site-design:has(.home) > footer { width: 100%; max-width: none; padding-inline: var(--page-gutter); }
+.site-header { height: 88px; border-bottom: 0; }
+.site-design:has(.home) > .site-header { height: var(--header-height); background: #edf0fc; }
+.brand-mark { color: #6579a7; font-size: 32px; }
+.site-header nav { font-size: 17px; }
+.site-design:has(.home) .brand-mark { font-size: clamp(28px, 2.3vw, 48px); }
+.site-design:has(.home) .site-header nav { font-size: clamp(17px, 1.2vw, 24px); }
+.collection-heading { position: relative; display: flex; align-items: center; min-height: var(--heading-height); padding: clamp(40px, 4vw, 100px) 0; }
+.home-title { position: relative; z-index: 1; margin: 0; padding: 0; font-size: clamp(38px, calc(28px + 2vw), 104px); line-height: 1.12; letter-spacing: -.04em; }
+.listing-toolbar { padding: 0 0 24px; margin-bottom: 28px; border-bottom: 1px solid var(--line); }
+.search { width: 300px; background: #ffffffb3; border-color: #dce2ed; padding: 10px 16px; }
+.search input { font-size: 15px; }
+.search:focus-within { border-color: #8d9ec1; box-shadow: 0 0 0 3px #8d9ec11a; }
+.sort-controls { gap: 8px; }
+.sort-controls button { border-radius: 5px; padding: 8px 15px; font-size: 15px; }
+.home .card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(36px, 2.8vw, 80px) clamp(24px, 2vw, 64px); }
+.home .card h3 { font-size: clamp(22px, calc(16px + .5vw), 36px); }
+.home .card-body { padding-top: clamp(17px, 1.2vw, 32px); }
+.home .search { width: clamp(240px, 22vw, 480px); }
+.home .search input { font-size: clamp(15px, calc(10px + .4vw), 24px); }
+.home .sort-controls button { font-size: clamp(15px, calc(12px + .2vw), 20px); }
+.card { background: transparent; border: 0; border-radius: 0; overflow: visible; transition: none; }
+.card:hover, .card:focus-within { transform: none; box-shadow: none; }
+.card-image { border-radius: 6px; aspect-ratio: 1.6; background: #edf0f7; }
+.card-body { padding: 17px 0 0; border-bottom: 1px solid var(--line); }
+.card h3 { font-size: 22px; line-height: 1.29; letter-spacing: -.4px; margin-bottom: 12px; }
+.impact-link:hover { color: #536eac; }
+.card-actions { padding: 0 0 8px; }
+.reactions button:hover, .share-button:hover { background: #eef1fa; }
+.reactions button[aria-pressed="true"] { background: #e9edfa; border-color: #91a3cb; }
+.image-empty { background: #edf0f7; color: #93a0b9; }
+.card:nth-child(3n + 2) .image-empty { background: #f1f0f9; color: #a19abe; }
+.card:nth-child(3n) .image-empty { background: #edf4f5; color: #91adb3; }
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline-color: #6f86ba; }
+@media (max-width: 620px) {
+  .collection-heading { min-height: 190px; padding: 42px 0 38px; }
+  .home-title { font-size: 38px; max-width: 310px; text-wrap: balance; }
+  .listing-toolbar { gap: 16px; padding-bottom: 22px; }
+  .home .card-grid { grid-template-columns: 1fr; gap: 28px; }
+  .home .card h3 { font-size: 24px; }
+  .card-body { padding: 17px 0 0; }
 }

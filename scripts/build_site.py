@@ -89,10 +89,10 @@ def page(title, content, prefix='./', home=False, source=SOURCE, path=''):
 <meta property="og:image:alt" content="AI Improves Lives dotless aı logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{esc(browser_title)}">
-<meta name="twitter:image" content="https://aiimproveslives.com/share-preview.png"><meta name="theme-color" content="#f7f6ef">
+<meta name="twitter:image" content="https://aiimproveslives.com/share-preview.png"><meta name="theme-color" content="#edf0fc">
 <link rel="icon" type="image/svg+xml" href="{asset('favicon.svg')}">
 <link rel="stylesheet" href="{asset('styles.css')}"><script defer src="{asset('site.js')}"></script><script defer src="{asset('voting.js')}"></script>{contribute_script}</head>
-<body data-base="{prefix}"><a class="skip" href="#main">Skip to content</a>
+<body data-base="{prefix}" class="site-design"><a class="skip" href="#main">Skip to content</a>
 <header class="site-header"><a class="brand" href="{prefix}" aria-label="AI Improves Lives"{impact_current}><span class="brand-mark" aria-hidden="true">aı</span></a>
 <nav aria-label="Main"><a href="{prefix}contribute/"{contribute_current}>Submit</a></nav></header>
 <main id="main" {'class="home"' if home else 'class="detail"'}>{content}</main>
@@ -178,7 +178,7 @@ def build(root=ROOT, output=Path('dist'), source=SOURCE, ranking=None):
         initial_ranking = [record['id'] for record in ordered]
     new_cards = ''.join(card(r, paths[r['id']], new_order=new_order[r['id']], score=scores.get(r['id'])) for r in ordered)
     initial_data = '' if initial_ranking is None else '<script type="application/json" id="initial-ranking">' + json.dumps(initial_ranking) + '</script>'
-    content = f'''<h1 class="home-title">Has AI Improved Lives?</h1>
+    content = f'''<div class="collection-heading"><h1 class="home-title">Has AI Improved Lives?</h1></div>
 <div class="listing-toolbar"><div class="sort-controls" role="group" aria-label="Order impacts"><button type="button" data-sort="top" aria-pressed="true">Top</button><button type="button" data-sort="new" aria-pressed="false">New</button></div><form class="search" role="search"><label class="sr-only" for="search">Search</label><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Search" autocomplete="off"><button type="reset" hidden>Clear</button></form></div>
 <p id="search-status" class="sr-only" role="status" aria-live="polite"></p><p id="ranking-status" class="ranking-status" role="status" hidden></p>
 <section id="impacts" aria-label="Impacts"><div class="card-grid">{new_cards}</div>{initial_data}<p class="empty" {'hidden' if impacts else ''}>No listings yet.</p></section>'''
