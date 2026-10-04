@@ -166,11 +166,9 @@ def build(root=ROOT, output=Path('dist'), source=SOURCE, ranking=None):
     scores = {row['impact_id']: row.get('score') for row in (ranking or []) if row.get('impact_id') in impacts}
     initial_ranking = None
     if ranking is not None:
-        ids = [row['impact_id'] for row in ranking if row.get('impact_id') in impacts]
-        ids = list(dict.fromkeys(ids))
-        initial_ranking = ids + [record['id'] for record in ordered if record['id'] not in ids]
-        ranks = {identifier: index for index, identifier in enumerate(initial_ranking)}
-        ordered.sort(key=lambda record: ranks[record['id']])
+        # Stable sorting keeps the newest impact date first when scores are equal.
+        ordered.sort(key=lambda record: scores.get(record['id']) or 0, reverse=True)
+        initial_ranking = [record['id'] for record in ordered]
     new_cards = ''.join(card(r, paths[r['id']], new_order=new_order[r['id']], score=scores.get(r['id'])) for r in ordered)
     initial_data = '' if initial_ranking is None else '<script type="application/json" id="initial-ranking">' + json.dumps(initial_ranking) + '</script>'
     content = f'''<h1 class="home-title">Has AI Improved Lives?</h1>

@@ -22,3 +22,32 @@ test('public Top rankings load while the sign-in SDK is still waiting',async()=>
   assert.equal(events[0].type,'impact-ranking');
   assert.deepEqual(Array.from(events[0].detail.ids),['top-entry']);
 });
+
+test('Top ties use newest impact dates for cached and refreshed scores', () => {
+  const listeners = {};
+  const empty = { hidden: true };
+  const status = {};
+  const clear = {};
+  const search = { value: '', addEventListener() {}, closest: () => ({ querySelector: () => clear, addEventListener() {} }) };
+  const cards = [
+    { dataset: { impact: 'old', newOrder: '2', search: 'old' } },
+    { dataset: { impact: 'new', newOrder: '0', search: 'new' } },
+    { dataset: { impact: 'middle', newOrder: '1', search: 'middle' } }
+  ];
+  let displayed;
+  const grid = { querySelectorAll: () => cards, append: (...ordered) => { displayed = ordered.map(card => card.dataset.impact); } };
+  const sorts = ['top', 'new'].map(sort => ({ dataset: { sort }, addEventListener(type, callback) { this.click = callback; }, setAttribute() {} }));
+  const nodes = { '#search': search, '#impacts .card-grid': grid, '#impacts .empty': empty, '#ranking-status': status, '#search-status': {} };
+  const document = { body: { dataset: { base: './' } }, addEventListener() {}, querySelector: selector => nodes[selector] || null, querySelectorAll: selector => selector === '[data-sort]' ? sorts : [] };
+  const rows = [{ impact_id: 'old', score: 2 }, { impact_id: 'middle', score: 2 }, { impact_id: 'new', score: 2 }];
+  const localStorage = { getItem: () => JSON.stringify({ savedAt: Date.now(), rows }), setItem() {} };
+  const window = { addEventListener: (type, callback) => { listeners[type] = callback; } };
+  vm.runInNewContext(readFileSync('src/site.js', 'utf8'), { document, window, localStorage, location: { href: 'https://example.org/', search: '', hostname: 'example.org' }, URL, URLSearchParams, history: { replaceState() {} }, setTimeout, clearTimeout });
+  assert.deepEqual(displayed, ['new', 'middle', 'old']);
+  listeners['impact-ranking']({ detail: { ids: ['old', 'new', 'middle'], rows: [{ impact_id: 'old', score: 9 }, { impact_id: 'new', score: 4 }, { impact_id: 'middle', score: 4 }] } });
+  assert.deepEqual(displayed, ['old', 'new', 'middle']);
+  sorts[1].click();
+  assert.deepEqual(displayed, ['new', 'middle', 'old']);
+  sorts[0].click();
+  assert.deepEqual(displayed, ['old', 'new', 'middle']);
+});
