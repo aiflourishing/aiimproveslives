@@ -156,3 +156,13 @@ class SiteTests(unittest.TestCase):
         from scripts.build_site import impact_paths
         with self.assertRaises(ValueError):
             impact_paths({self.identifier: self.impact}, {self.identifier: 'contribute'})
+
+    def test_top_equal_scores_follow_impact_dates_not_server_order(self):
+        self.populate()
+        second = '12345678-1234-1234-1234-123456789abd'
+        (self.data / f'impacts/{second}.json').write_text(json.dumps({**self.impact, 'id': second, 'occurred_by': '2026/01/03'}))
+        build(self.data, self.output, self.source, ranking=[{'impact_id': self.identifier, 'score': 3}, {'impact_id': second, 'score': 3}])
+        home = (self.output / 'index.html').read_text()
+        self.assertLess(home.index(f'data-impact="{second}"'), home.index(f'data-impact="{self.identifier}"'))
+        initial = home.split('id="initial-ranking">')[1].split('</script>')[0]
+        self.assertEqual(json.loads(initial), [second, self.identifier])

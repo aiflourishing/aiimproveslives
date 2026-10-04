@@ -40,13 +40,18 @@
     const params = new URLSearchParams(location.search);
     let order = params.get('sort') === 'new' ? 'new' : 'top';
     let ranking = null;
+    function rankedIds(rows) {
+      const scores = new Map(rows.map(row => [row.impact_id, Number(row.score) || 0]));
+      // Cards already follow newest impact date; stable sorting preserves that for ties.
+      return [...cards].sort((a, b) => (scores.get(b.dataset.impact) || 0) - (scores.get(a.dataset.impact) || 0)).map(card => card.dataset.impact);
+    }
     const initial = document.querySelector('#initial-ranking');
     if (initial) { try { ranking = JSON.parse(initial.textContent); } catch {} }
     const rankingCacheKey = `impact-ranking:v1:${new URL(document.body.dataset.base, location.href).href}`;
     try {
       const cached = JSON.parse(localStorage.getItem(rankingCacheKey));
       if (cached && Date.now() - cached.savedAt < 86400000 && Array.isArray(cached.rows)) {
-        ranking = cached.rows.map(row => row.impact_id);
+        ranking = rankedIds(cached.rows);
         const scores = new Map(cached.rows.map(row => [row.impact_id, row.score]));
         document.querySelectorAll('[data-score-for]').forEach(label => {
           const score = Number(scores.get(label.dataset.scoreFor));
@@ -91,6 +96,7 @@
     window.addEventListener('impact-ranking', event => {
       if (event.detail.ids !== null) ranking = event.detail.ids;
       if (event.detail.rows) {
+        ranking = rankedIds(event.detail.rows);
         try { localStorage.setItem(rankingCacheKey, JSON.stringify({ savedAt: Date.now(), rows: event.detail.rows })); } catch {}
       }
       rankMessage = event.detail.message || 'Couldn’t load Top. Showing newest first.';
