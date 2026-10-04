@@ -68,6 +68,11 @@ def render_contribution(source):
     return content + '<script id="contribution-copy" type="application/json">' + data + '</script>'
 
 
+def share_preview_filename(source):
+    digest = hashlib.sha256((source / 'share-preview.png').read_bytes()).hexdigest()[:10]
+    return f'share-preview-{digest}.png'
+
+
 def page(title, content, prefix='./', home=False, source=SOURCE, path=''):
     browser_title = 'Has AI Improved Lives' if home else f'{title} — AI Improves Lives'
     def asset(name):
@@ -76,6 +81,7 @@ def page(title, content, prefix='./', home=False, source=SOURCE, path=''):
     impact_current = ' aria-current="page"' if home else ''
     contribute_current = ' aria-current="page"' if title == 'Contribute' else ''
     contribute_script = f"<script defer src=\"{asset('contribute.js')}\"></script>" if title == 'Contribute' else ''
+    share_image = 'https://aiimproveslives.com/' + share_preview_filename(source)
     footer = '' if title in ('About', 'Contribute') else f'''<footer><div class="share-control footer-share"><button type="button" class="footer-share-button" data-copy-url="{esc('https://aiimproveslives.com/' + path)}" hidden>Know someone who’d find this inspiring? Share it!</button><span class="share-toast" role="status" hidden></span><label class="share-fallback" hidden>Copy this link<input type="url" readonly aria-label="Page link"></label></div></footer>'''
     return f'''<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -84,12 +90,12 @@ def page(title, content, prefix='./', home=False, source=SOURCE, path=''):
 <meta property="og:type" content="website">
 <link rel="canonical" href="{esc('https://aiimproveslives.com/' + path)}">
 <meta property="og:url" content="{esc('https://aiimproveslives.com/' + path)}">
-<meta property="og:image" content="https://aiimproveslives.com/share-preview.png">
+<meta property="og:image" content="{share_image}">
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="AI Improves Lives dotless aı logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{esc(browser_title)}">
-<meta name="twitter:image" content="https://aiimproveslives.com/share-preview.png"><meta name="theme-color" content="#edf0fc">
+<meta name="twitter:image" content="{share_image}"><meta name="theme-color" content="#edf0fc">
 <link rel="icon" type="image/svg+xml" href="{asset('favicon.svg')}">
 <link rel="stylesheet" href="{asset('styles.css')}"><script defer src="{asset('site.js')}"></script><script defer src="{asset('voting.js')}"></script>{contribute_script}</head>
 <body data-base="{prefix}" class="site-design"><a class="skip" href="#main">Skip to content</a>
@@ -159,6 +165,7 @@ def build(root=ROOT, output=Path('dist'), source=SOURCE, ranking=None):
     build_catalog(root, output / 'catalog.json')
     for filename in ['styles.css', 'site.js', 'voting.js', 'contribute.js', 'voting-config.json', 'share-preview.png', 'favicon.svg']:
         shutil.copyfile(source / filename, output / filename)
+    shutil.copyfile(source / 'share-preview.png', output / share_preview_filename(source))
     shutil.copytree(source / 'vendor', output / 'vendor', dirs_exist_ok=True)
     (output / '.nojekyll').touch()
     ordered = sorted(impacts.values(), key=lambda r: (r['occurred_by'], r['id']), reverse=True)
